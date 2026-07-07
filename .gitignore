@@ -1,0 +1,36 @@
+﻿# CCS/Eclipse project settings (user-specific)
+.settings/
+
+# Code Composer Studio / CCS Theia build outputs
+Debug/
+Release/
+
+# Compiled object files
+*.o
+*.obj
+*.d
+*.d.*
+*.pdb
+
+# Linked binaries
+*.out
+*.hex
+*.bin
+*.elf
+*.map
+*.a
+*.lib
+
+# TI compiler generated
+*.pp
+*.pp.*
+
+# CCS launch configurations (user-specific)
+*.launch
+
+# VS Code / Theia user settings
+.vscode/
+
+# OS generated
+Thumbs.db
+.DS_Store
