@@ -45,5 +45,7 @@ int main(void)
         {
             DL_GPIO_clearPins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN);
         }
+        if (DL_GPIO_readPins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN))
+            printf("LED is ON\n");
     }
 }
