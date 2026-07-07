@@ -11,16 +11,21 @@
  */
 const GPIO   = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1  = GPIO.addInstance();
+const GPIO2  = GPIO.addInstance();
 const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 
 /**
  * Write custom configuration values to the imported modules.
  */
-GPIO1.$name                         = "GPIO_GRP_0";
-GPIO1.associatedPins[0].$name       = "PIN_0";
-GPIO1.associatedPins[0].pin.$assign = "PA14";
+GPIO1.$name                         = "GPIO_SWITCH";
+GPIO1.associatedPins[0].$name       = "SWITCH_1";
+GPIO1.associatedPins[0].pin.$assign = "PB3";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
+
+GPIO2.$name                         = "GPIO_LED";
+GPIO2.associatedPins[0].$name       = "LED_1";
+GPIO2.associatedPins[0].pin.$assign = "PA14";
 
 SYSCTL.forceDefaultClkConfig = true;
 
