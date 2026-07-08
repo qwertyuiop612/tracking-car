@@ -31,20 +31,23 @@
  */
 
 #include "ti_msp_dl_config.h"
+#include "default.h"
 
 int main(void)
 {
     SYSCFG_DL_init();
-    uint32_t i;
-    while (1) {
-        i = DL_GPIO_readPins(GPIO_SWITCH_PORT,GPIO_SWITCH_SWITCH_1_PIN);
-        if(i == 0)
-        {
-            DL_GPIO_setPins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN);
-        }
-        else
-        {
-            DL_GPIO_clearPins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN);
-        }
+
+    int i = 0;
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
+    DL_TimerG_startCounter(TIMER_0_INST);
+
+    while (1) 
+    {
+
     }
+}
+
+void TIMER_0_INST_IRQHandler(void)
+{
+    DL_GPIO_togglePins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN);
 }
