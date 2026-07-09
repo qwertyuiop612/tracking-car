@@ -14,5 +14,26 @@ uint8_t sensor_detect(void)
     if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_5_PORT, SENSOR_GRP_SNESOR_5_PIN)) {i++; sensor[5] = 6;}else sensor[5] = 0;
     if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_6_PORT, SENSOR_GRP_SNESOR_6_PIN)) {i++; sensor[6] = 7;}else sensor[6] = 0;
     sum = sensor[0] + sensor[1] + sensor[2] + sensor[3] + sensor[4] + sensor[5] + sensor[6];
+    if(i == 0) return 0;
+    else return sum/i;
 }
 //------------------------------------------从0到6分别为从左到右---------------------------------------//
+
+//---------------------------------------------速度对应-----------------------------------------------//
+int DifPWM(void)
+{
+    int index = sensor_detect() * 2 + 0.5;
+    switch(index)
+    {
+        case 2: return 200; // sensor 1
+        case 3: return 150; // sensor 1+2
+        case 4: return 100; // sensor 2
+        case 5: return 50;  // sensor 2+3
+        case 6: return 0;   // sensor 3
+        case 7: return -50;  // sensor 3+4
+        case 8: return -100; // sensor 4
+        case 9: return -150; // sensor 4+5
+        case 10: return -200; // sensor 5
+        default: break; // sensor 0 or 6
+    }
+}
