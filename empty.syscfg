@@ -11,7 +11,6 @@
  */
 const GPIO          = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1         = GPIO.addInstance();
-const GPIO2         = GPIO.addInstance();
 const PWM           = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1          = PWM.addInstance();
 const SYSCTL        = scripting.addModule("/ti/driverlib/SYSCTL");
@@ -20,17 +19,38 @@ const ProjectConfig = scripting.addModule("/ti/project_config/ProjectConfig");
 /**
  * Write custom configuration values to the imported modules.
  */
-GPIO1.$name                              = "GPIO_SWITCH";
-GPIO1.associatedPins[0].$name            = "SWITCH_1";
-GPIO1.associatedPins[0].internalResistor = "PULL_UP";
+GPIO1.$name                              = "SENSOR_GRP";
+GPIO1.associatedPins.create(7);
 GPIO1.associatedPins[0].direction        = "INPUT";
-GPIO1.associatedPins[0].pin.$assign      = "PB21";
+GPIO1.associatedPins[0].$name            = "SNESOR_0";
+GPIO1.associatedPins[0].internalResistor = "PULL_UP";
+GPIO1.associatedPins[0].pin.$assign      = "PA2";
+GPIO1.associatedPins[1].$name            = "SNESOR_1";
+GPIO1.associatedPins[1].direction        = "INPUT";
+GPIO1.associatedPins[1].internalResistor = "PULL_UP";
+GPIO1.associatedPins[1].pin.$assign      = "PA24";
+GPIO1.associatedPins[2].$name            = "SNESOR_2";
+GPIO1.associatedPins[2].direction        = "INPUT";
+GPIO1.associatedPins[2].internalResistor = "PULL_UP";
+GPIO1.associatedPins[2].pin.$assign      = "PB9";
+GPIO1.associatedPins[3].$name            = "SNESOR_3";
+GPIO1.associatedPins[3].direction        = "INPUT";
+GPIO1.associatedPins[3].internalResistor = "PULL_UP";
+GPIO1.associatedPins[3].pin.$assign      = "PB8";
+GPIO1.associatedPins[4].$name            = "SNESOR_4";
+GPIO1.associatedPins[4].direction        = "INPUT";
+GPIO1.associatedPins[4].internalResistor = "PULL_UP";
+GPIO1.associatedPins[4].pin.$assign      = "PA16";
+GPIO1.associatedPins[5].$name            = "SNESOR_5";
+GPIO1.associatedPins[5].direction        = "INPUT";
+GPIO1.associatedPins[5].internalResistor = "PULL_UP";
+GPIO1.associatedPins[5].pin.$assign      = "PA15";
+GPIO1.associatedPins[6].$name            = "SNESOR_6";
+GPIO1.associatedPins[6].direction        = "INPUT";
+GPIO1.associatedPins[6].internalResistor = "PULL_UP";
+GPIO1.associatedPins[6].pin.$assign      = "PA14";
 
 const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
-
-GPIO2.$name                         = "GPIO_LED";
-GPIO2.associatedPins[0].$name       = "LED_1";
-GPIO2.associatedPins[0].pin.$assign = "PB13";
 
 PWM1.$name                                    = "PWM_0";
 PWM1.pwmMode                                  = "EDGE_ALIGN_UP";
