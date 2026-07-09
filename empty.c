@@ -37,17 +37,31 @@ int main(void)
 {
     SYSCFG_DL_init();
 
-    int i = 0;
-    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
-    DL_TimerG_startCounter(TIMER_0_INST);
+    float i = 0.0f;
+    uint8_t up = 1;
+    DL_TimerG_startCounter(PWM_0_INST);
 
     while (1) 
     {
-
+        PWM_duty(i,0);
+if (up)
+        {
+            i += 0.02f;
+            if (i >= 1.0f)
+            {
+                i = 1.0f;
+                up = 0;
+            }
+        }
+        else
+        {
+            i -= 0.02f;
+            if (i <= 0.0f)
+            {
+                i = 0.0f;
+                up = 1;
+            }
+        }
+        delay_ms(100);
     }
-}
-
-void TIMER_0_INST_IRQHandler(void)
-{
-    DL_GPIO_togglePins(GPIO_LED_PORT,GPIO_LED_LED_1_PIN);
 }
