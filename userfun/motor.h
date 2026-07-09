@@ -8,5 +8,5 @@ void motor_RT(int speed);
 void motor_ST(int speed);
 void motor_BK(int speed);
 void motor_STOP(void);
-
+void motor_PWM(int L,int R);
 #endif // MOTOR_H

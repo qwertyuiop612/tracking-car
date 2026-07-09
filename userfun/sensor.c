@@ -25,15 +25,15 @@ int DifPWM(void)
     int index = sensor_detect() * 2 + 0.5;
     switch(index)
     {
-        case 2: return 200; // sensor 1
-        case 3: return 150; // sensor 1+2
-        case 4: return 100; // sensor 2
-        case 5: return 50;  // sensor 2+3
+        case 2: return 500; // sensor 1
+        case 3: return 350; // sensor 1+2
+        case 4: return 200; // sensor 2
+        case 5: return 150;  // sensor 2+3
         case 6: return 0;   // sensor 3
-        case 7: return -50;  // sensor 3+4
-        case 8: return -100; // sensor 4
-        case 9: return -150; // sensor 4+5
-        case 10: return -200; // sensor 5
+        case 7: return -150;  // sensor 3+4
+        case 8: return -200; // sensor 4
+        case 9: return -350; // sensor 4+5
+        case 10: return -500; // sensor 5
         default: break; // sensor 0 or 6
     }
 }
