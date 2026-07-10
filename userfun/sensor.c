@@ -1,7 +1,7 @@
 #include "sensor.h"
 #include "ti_msp_dl_config.h"
 //------------通过设定每个传感器为一个特定数值，确定一个权重，越靠近中心权重越低，最后使得数值为4-------------//
-uint8_t sensor_detect(void)
+float sensor_detect(void)
 {
     uint8_t sensor[7];
     uint16_t i = 0;
@@ -34,6 +34,6 @@ int DifPWM(void)
         case 8: return -200; // sensor 4
         case 9: return -350; // sensor 4+5
         case 10: return -500; // sensor 5
-        default: break; // sensor 0 or 6
+        default: break;
     }
 }
