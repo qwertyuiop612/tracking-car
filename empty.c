@@ -37,9 +37,16 @@
 int main(void)
 {
     SYSCFG_DL_init();
-
+    motor_Init();  //电机初始化
     while (1) 
     {
-        
+        if (flag() == 0)  //未丢线
+        {
+            track();  //循迹
+        }
+        else  //丢线
+        {
+            track_lost();  //丢线逻辑
+        }
     }
 }
