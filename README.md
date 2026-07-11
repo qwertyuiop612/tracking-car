@@ -29,7 +29,7 @@
 
 ```c
 SYSCFG_DL_init();
-motor_Init();
+motor_init();
 while (1)
 {
     if (flag() == 0)
@@ -56,16 +56,24 @@ while (1)
 | 传感器组 - 通道 4 | `SENSOR_GRP.SNESOR_4` | PA16 |
 | 传感器组 - 通道 5 | `SENSOR_GRP.SNESOR_5` | PA15 |
 | 传感器组 - 通道 6 | `SENSOR_GRP.SNESOR_6` | PA14 |
-| 电机驱动 TB6612 AIN1 | `TB6612_AIN1` | PA8 |
-| 电机驱动 TB6612 AIN2 | `TB6612_AIN2` | PA9 |
-| 电机驱动 TB6612 STBY | `TB6612_STBY` | PB24 |
-| PWM 输出 | `PWM_0.peripheral.ccp0Pin` | PA12 |
 | OLED SCL | `OLED_GRP.SCL_PIN` | PB2 |
 | OLED SDA | `OLED_GRP.SDA_PIN` | PB3 |
+| TB6612 AIN1 | `TB6612_AIN1` | PA8 |
+| TB6612 AIN2 | `TB6612_AIN2` | PA9 |
+| TB6612 STBY | `TB6612_STBY` | PB24 |
+| TB6612 ENCD_LA | `TB6612_ENCD_LA` | PA22 |
+| TB6612 ENCD_LB | `TB6612_ENCD_LB` | PA21 |
+| TB6612 ENCD_RA | `TB6612_ENCD_RA` | PB19 |
+| TB6612 ENCD_RB | `TB6612_ENCD_RB` | PB20 |
+| TB6612 BIN1 | `TB6612_BIN1` | PB18 |
+| TB6612 BIN2 | `TB6612_BIN2` | PA7 |
+| PWM 输出 | `PWM_0.peripheral.ccp0Pin` | PA12 |
 | 开关 1 | `SWITCH_GRP.SWITCH_1` | PB7 |
 | 开关 0 | `SWITCH_GRP.SWITCH_0` | 未分配 |
 
 请根据实际硬件在 SysConfig 或代码中的宏定义（如 `SENSOR_GRP_SNESOR_0_PIN`、`TB6612_AIN1_PIN` 等）同步上述映射。
+
+> 说明：当前 `empty.syscfg` 中 `SWITCH_0` 尚未分配引脚，如需使用请先在 SysConfig 中指定对应 GPIO 引脚。
 
 ## 使用说明
 
@@ -76,7 +84,7 @@ while (1)
 2. 初始化 SysConfig 与电机：
    ```c
    SYSCFG_DL_init();
-   motor_Init();
+   motor_init();
    ```
 3. 主循环中调用：
    - 正常循迹：`track();`
