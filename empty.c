@@ -34,13 +34,14 @@
 #include "default.h"
 #include "sensor.h"
 #include "track.h"
+#include "interrupt.h"
+#include "motor.h"
 
 int main(void)
 {
     SYSCFG_DL_init();
 
-    NVIC_EnableIRQ(FLAG_INST_INT_IRQN); //每过2ms检测一次是否丢线，并进行相关操作
-    NVIC_EnableIRQ(TB6612_INT_IRQN);  //编码器定时读取，放在TB6612中断里
+    NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);  //编码器定时读取，放在TB6612中断里
 
     motor_Init();  //电机初始化
     while (1) 
@@ -54,10 +55,4 @@ int main(void)
             track_lost();  //丢线逻辑
         }
     }
-}
-
-
-void FLAG_INST_IRQHandler(void)
-{
-    flag();
 }

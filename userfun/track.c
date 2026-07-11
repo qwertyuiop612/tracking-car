@@ -1,8 +1,9 @@
-#include "track.h"
-#include "motor.h"
-#include "sensor.h"
 #include "ti_msp_dl_config.h"
 #include "default.h"
+#include "sensor.h"
+#include "track.h"
+#include "interrupt.h"
+#include "motor.h"
 
 // 文件级共享状态：last_state 与 丢线标志 DX
 static float flag_last_state = 0.0f;
