@@ -5,6 +5,9 @@
 #include "interrupt.h"
 #include "motor.h"
 
+extern uint32_t tmp_a;
+float speed_1 = 0.0;
+float speed_2 = 0.0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
 void motor_init(void)
@@ -61,16 +64,21 @@ void motor_PWM(int leftPWM,int rightPWM)
     }*/
 }
 
-//-------------------------------------中断函数(电机PID)计算------------------------------------------------//
-void MOTOR_PID_INST_IRQHandler(void)
+//------------------------------------------------速度计算------------------------------------------------//
+float cal_speed(uint8_t motor_id)
 {
-    sensor_Get_Right_speed();
-    switch( DL_TimerG_getPendingInterrupt(MOTOR_PID_INST ) )
+    float speed = 0.0;
+    if (motor_id == 1)
     {
-        case DL_TIMER_IIDX_ZERO:
-            PID_Calculate();
-            break;
-        default:
-            break;
+        speed_1 = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //1速度 mm/s  200为频率
+        tmp_a = 0;
     }
+    /*if (motor_id == 2)
+    {
+        speed_2 = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //2速度 mm/s
+        tmp_b = 0;
+    }*/
+    return speed;
 }
+
+//-------------------------------------中断函数(电机PID)计算------------------------------------------------//

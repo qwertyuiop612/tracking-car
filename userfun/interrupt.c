@@ -5,7 +5,7 @@
 #include "interrupt.h"
 #include "motor.h"
 
-int tmp_a = 0;
+uint32_t tmp_a = 0;
 //int tmp_b = 0;
 
 void GROUP1_IRQHandler(void)

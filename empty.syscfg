@@ -141,9 +141,9 @@ SYSCTL.clockTreeEn           = true;
 
 TIMER1.$name              = "MOTOR_PID";
 TIMER1.timerMode          = "PERIODIC_UP";
-TIMER1.timerClkDiv        = 4;
-TIMER1.timerPeriod        = "3 ms";
 TIMER1.interrupts         = ["LOAD"];
+TIMER1.timerClkDiv        = 8;
+TIMER1.timerPeriod        = "5 ms";
 TIMER1.peripheral.$assign = "TIMA0";
 
 ProjectConfig.genLibDrivers = true;
