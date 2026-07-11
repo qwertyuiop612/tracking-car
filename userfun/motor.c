@@ -5,54 +5,52 @@
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
 void motor_init(void)
 {
-    SYSCFG_DL_PWM_0_init();
-    PWM_duty(1000,0);
-    PWM_duty(1000,1);
+    DL_GPIO_setPins(TB6612_STBY_PORT,TB6612_STBY_PIN);  //使能电机驱动芯片
+    DL_Timer_startCounter(PWM_0_INST);
+    DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);  //设置电机方向为静止
+    DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
+    DL_Timer_setCaptureCompareValue(PWM_0_INST,0,GPIO_PWM_0_C0_IDX);
 }
 
 //-----------------------------------------------电机转动设置------------------------------------------------//
-void motor_LT(int speed)  //原地左转
+void motor_PWM(int leftPWM,int rightPWM)
 {
-    motor_PWM(-speed,speed);
-}
-void motor_RT(int speed)  //原地右转
-{
-    motor_PWM(speed,-speed);
-}
-void motor_ST(int speed)  //直行
-{
-    motor_PWM(speed,speed);
-}
-void motor_BK(int speed)  //后退
-{
-    motor_PWM(-speed,-speed);
-}
-void motor_STOP(void)  //停止
-{
-    motor_PWM(0,0);
-}
+    leftPWM = leftPWM * 4;  //将PWM值扩大4倍，增加电机转速
+    rightPWM = rightPWM * 4;
+    if(leftPWM > 0)  //左轮正转
+    {
+        DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
+        DL_GPIO_clearPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
+        PWM_duty(leftPWM,0);
+    }
+    else if(leftPWM < 0)  //左轮反转
+    {
+        DL_GPIO_clearPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
+        DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
+        leftPWM = -leftPWM;
+        PWM_duty(leftPWM,0);
+    }
+    else  //左轮静止
+    {
+        DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
+        DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
+        PWM_duty(0,0);
 
-//-----------------------------------------------电机PWM直接设置------------------------------------------------//
-void motor_PWM(int L,int R)  //直接设置PWM
-{
-    if(L>0)
-    {
-        PWM_duty(1000-L,0);
-        PWM_duty(1000,1);
     }
-    else
+    /*if(rightPWM > 0)  //右轮正转
     {
-        PWM_duty(1000,0);
-        PWM_duty(1000+L,1);
+        DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
+        DL_GPIO_clearPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
     }
-    if(R>0)
+    else if(rightPWM < 0)  //右轮反转
     {
-        PWM_duty(1000-R,2);
-        PWM_duty(1000,3);
+        DL_GPIO_clearPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
+        DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
+        rightPWM = -rightPWM;
     }
-    else
+    else  //右轮静止
     {
-        PWM_duty(1000,2);
-        PWM_duty(1000+R,3);
-    }
+        DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
+        DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
+    }*/
 }

@@ -1,29 +1,47 @@
 # tracking-car
 
-本工程基于 MSPM0 DriverLib 的 empty 示例，扩展了循迹小车相关模块。包含封装好的循迹/传感/电机接口与 SysConfig 引脚映射说明，便于在 `main` / `empty.c` 中直接调用 `track()`、`flag()`、`track_lost()` 等函数实现循迹与丢线处理。
+本工程基于 TI MSPM0G3507 empty 示例，扩展为一个简易循迹小车项目。项目把传感器、循迹、丢线处理和电机 PWM 控制封装在 `userfun` 目录下，`empty.c` 中只需通过 `flag()` 判断状态后调用 `track()` 或 `track_lost()`。
 
-## 概要
+## 目录说明
 
-- 扩展在 `userfun` 目录下增加自定义模块。
-- 通过 `track.c` 实现传感器状态判断、`last_state` 记录、丢线标志 `DX` 控制、PWM 计算与电机驱动调用。
-- 通过 `flag()` 接口判断丢线、通过 `track_lost()` 接口处理脱线恢复。
-- 通过 `track.h` 对外暴露接口，`flag_last_state` 与 `flag_DX` 为文件级 `static`，外部不能直接访问。
+- `empty.c`：主程序，初始化 SysConfig 并在主循环中切换循迹/丢线逻辑。
+- `userfun/track.c` / `userfun/track.h`：循迹核心逻辑。
+- `userfun/sensor.c` / `userfun/sensor.h`：传感器读取接口。
+- `userfun/motor.c` / `userfun/motor.h`：电机 PWM 输出与差速控制。
+- `ti_msp_dl_config.c` / `ti_msp_dl_config.h`：SysConfig 初始化。
 
-## 已封装模块
+## 核心接口
 
-- `userfun/track.c`
-  - 函数：`float flag(void);`、`void track(void);`、`void track_lost(void);`
-  - 职责：记录 `last_state`、维护丢线标志 `DX`、主循迹控制逻辑（PWM 计算、驱动电机）。
-- `userfun/motor.c` / `userfun/motor.h`
-  - 典型接口：`motor_PWM(left, right);`、`DifPWM();`
-  - 职责：电机 PWM 输出与差速封装。
-- `userfun/sensor.c` / `userfun/sensor.h`
-  - 典型接口：`int sensor_detect(void);`
-  - 职责：读取传感器输入并返回位置/state 值。
-- `userfun/track.h`
-  - 对外声明：`float flag(void);`、`void track(void);`、`void track_lost(void);`
+- `float flag(void);`
+  - 读取传感器状态。
+  - 若当前检测为丢线，则设置丢线标志并返回 `1`。
+  - 若未丢线，则记录当前 `state` 作为最后一次有效线路位置，并返回 `0`。
+- `void track(void);`
+  - 正常循迹函数。
+  - 调用 `sensor_detect()` 获得线路位置，计算 `avrPWM`、`leftPWM` 和 `rightPWM`，并通过 `motor_PWM()` 输出。
+- `void track_lost(void);`
+  - 丢线恢复函数。
+  - 根据上一次记录的 `last_state` 判定方向，执行转向或直行，直到重新检测到线路后清除丢线标志。
 
-> 如果 `flag()` 名称与系统库冲突，建议重命名为 `track_flag()` 或类似更明确的函数名。
+## 运行流程
+
+`empty.c` 中的主循环逻辑如下：
+
+```c
+SYSCFG_DL_init();
+motor_Init();
+while (1)
+{
+    if (flag() == 0)
+    {
+        track();
+    }
+    else
+    {
+        track_lost();
+    }
+}
+```
 
 ## SysConfig 引脚映射（来自 `empty.syscfg`）
 
@@ -38,39 +56,42 @@
 | 传感器组 - 通道 4 | `SENSOR_GRP.SNESOR_4` | PA16 |
 | 传感器组 - 通道 5 | `SENSOR_GRP.SNESOR_5` | PA15 |
 | 传感器组 - 通道 6 | `SENSOR_GRP.SNESOR_6` | PA14 |
-| PWM 组 0 CCP0（建议） | `PWM_0.peripheral.ccp0Pin` | PA12 |
-| PWM 组 0 CCP1（建议） | `PWM_0.peripheral.ccp1Pin` | PA13 |
-| PWM 组 1 CCP0 | `PWM_1.peripheral.ccp0Pin` | PA8 |
-| PWM 组 1 CCP1 | `PWM_1.peripheral.ccp1Pin` | PA9 |
+| 电机驱动 TB6612 AIN1 | `TB6612_AIN1` | PA8 |
+| 电机驱动 TB6612 AIN2 | `TB6612_AIN2` | PA9 |
+| 电机驱动 TB6612 STBY | `TB6612_STBY` | PB24 |
+| PWM 输出 | `PWM_0.peripheral.ccp0Pin` | PA12 |
+| OLED SCL | `OLED_GRP.SCL_PIN` | PB2 |
+| OLED SDA | `OLED_GRP.SDA_PIN` | PB3 |
+| 开关 1 | `SWITCH_GRP.SWITCH_1` | PB7 |
+| 开关 0 | `SWITCH_GRP.SWITCH_0` | 未分配 |
 
-请根据实际硬件在 SysConfig 或代码中的宏定义（如 `MOTOR_LEFT_PWM_PIN`、`SENSOR_0_PIN` 等）同步上述映射。
+请根据实际硬件在 SysConfig 或代码中的宏定义（如 `SENSOR_GRP_SNESOR_0_PIN`、`TB6612_AIN1_PIN` 等）同步上述映射。
 
 ## 使用说明
 
-1. 在 `main/empty.c` 中包含头文件：
+1. 在 `empty.c` 中包含头文件：
    ```c
-   #include "userfun/track.h"
+   #include "track.h"
    ```
-
-2. 在主循环或定时回调中调用：
+2. 初始化 SysConfig 与电机：
+   ```c
+   SYSCFG_DL_init();
+   motor_Init();
+   ```
+3. 主循环中调用：
    - 正常循迹：`track();`
    - 丢线检测：`flag();`
-   - 脱线恢复：`track_lost();`
+   - 丢线恢复：`track_lost();`
 
-3. 确保工程中编译并链接 `userfun` 下的源文件。
+## 设计说明
 
-## 预期行为说明
+- `track.c` 中的 `flag_last_state` 与 `flag_DX` 为文件级 `static` 变量，外部不可直接访问。
+- `flag()` 用于检测是否脱离线路，并在未脱线时记录最后一次有效线路位置。
+- `track()` 通过 `DifPWM()` 计算差速，结合传感器位置计算左右电机 PWM。
+- `track_lost()` 根据最后一次线路位置决定转向策略，直到重新检测到线路后恢复循迹。
 
-- `flag()`：读取传感器状态；如果检测到脱线则设置 `DX=1`，否则保留上一次的 `last_state`。
-- `track_lost()`：从 `flag.c` 维护的 `last_state` 获取上一次状态；如果重新检测到线路，则将 `DX` 清零。
-- `track()`：根据传感器检测值计算 PWM，调整左右电机输出，保持循迹。
+## 编译与调试
 
-## 开发提示
-
-- 修改引脚后请同步 `SysConfig` 并更新代码中的宏或 pin 映射。
-- `track.c` 中使用的是文件级 `static` 变量，外部只能通过接口访问。
-- 若需要我把具体宏定义写入头文件或生成 `track.h`，请贴出你的宏名称或现有头文件片段。
-
-## 编译与运行
-
-按原 empty 项目流程编译、烧录并运行。调试时注意 SWD 引脚 `PA19/PA20` 可能被占用。
+- 按照原 empty 示例工程流程编译、烧录并运行。
+- 注意 SWD 引脚 `PA19/PA20` 在调试时可能被占用，若需要复用请先断开调试连接。
+- 修改引脚配置后，请同步 `empty.syscfg` 并更新相应代码。

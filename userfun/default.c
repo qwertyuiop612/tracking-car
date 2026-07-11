@@ -1,6 +1,9 @@
 #include "ti_msp_dl_config.h"
 #include "default.h"
 
+//详细信息在default.h中
+
+
 //---------------------------------------------延时函数(毫秒)--------------------------------------------//
 void delay_ms(uint32_t ms)
 
@@ -12,47 +15,11 @@ void delay_ms(uint32_t ms)
 }
 
 //-----------------------------------------------PWM占空比设置-------------------------------------------//
-void PWM_duty(float duty,uint8_t channel)
+void PWM_duty(int duty,int motor_id)
 {
-    uint32_t compare;
-    if (duty > 0)                 //大于0 正转
-    { 
-        compare = PWM_0_INST_CLK_FREQ/1000 - PWM_0_INST_CLK_FREQ/1000 * duty/1000;
-        if(channel == 0)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_0_INST,compare,DL_TIMER_CC_0_INDEX);
-        }
-        else if(channel == 1)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_0_INST,compare,DL_TIMER_CC_1_INDEX);
-        }
-        else if(channel == 2)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_1_INST,compare,DL_TIMER_CC_0_INDEX);
-        }
-        else if(channel == 3)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_1_INST,compare,DL_TIMER_CC_1_INDEX);
-        }
-    }
-    else if(duty < 0)            //小于0 反转
+    if (duty > PWM_0_INST_CLK_FREQ/10000) duty = PWM_0_INST_CLK_FREQ/10000;  // 限制最大占空比
+    if(motor_id == 0)
     {
-        compare = PWM_0_INST_CLK_FREQ/1000 + PWM_0_INST_CLK_FREQ/1000 * -duty/1000;
-        if(channel == 0)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_0_INST,compare,DL_TIMER_CC_1_INDEX);
-        }
-        else if(channel == 1)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_0_INST,compare,DL_TIMER_CC_0_INDEX);
-        }
-        else if(channel == 2)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_1_INST,compare,DL_TIMER_CC_1_INDEX);
-        }
-        else if(channel == 3)
-        {
-            DL_TimerG_setCaptureCompareValue(PWM_1_INST,compare,DL_TIMER_CC_0_INDEX);
-        }
+        DL_Timer_setCaptureCompareValue(PWM_0_INST,duty,GPIO_PWM_0_C0_IDX);
     }
 }
