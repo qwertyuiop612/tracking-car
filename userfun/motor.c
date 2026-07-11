@@ -6,8 +6,18 @@
 #include "motor.h"
 
 extern uint32_t tmp_a;
+extern uint32_t tmp_b;
+uint16_t PWM_1_duty = 0;
 float speed_1 = 0.0;
 float speed_2 = 0.0;
+float target_speed_1 = 0.0;
+float target_speed_2 = 0.0;
+float last_error_1 = 0;
+float current_error_1 = 0;
+float kp = 0.5;
+float ki = 0.1; 
+float kd = 0.1; 
+float integral = 0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
 void motor_init(void)
@@ -46,7 +56,7 @@ void motor_PWM(int leftPWM,int rightPWM)
         PWM_duty(0,0);
 
     }
-    /*if(rightPWM > 0)  //右轮正转
+    if(rightPWM > 0)  //右轮正转
     {
         DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
         DL_GPIO_clearPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
@@ -61,7 +71,7 @@ void motor_PWM(int leftPWM,int rightPWM)
     {
         DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
         DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
-    }*/
+    }
 }
 
 //------------------------------------------------速度计算------------------------------------------------//
@@ -73,12 +83,23 @@ float cal_speed(uint8_t motor_id)
         speed_1 = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //1速度 mm/s  200为频率
         tmp_a = 0;
     }
-    /*if (motor_id == 2)
+    if (motor_id == 2)
     {
-        speed_2 = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //2速度 mm/s
+        speed_2 = (float)tmp_b / ENCODE * PI * WHEEL_DIAMETER * 200;  //2速度 mm/s
         tmp_b = 0;
-    }*/
+    }
     return speed;
+}
+
+//------------------------------------------PID(仅使用PI速度环控制)---------------------------------------------------//
+
+void MOTOR_PID(uint8_t motor_id)
+{
+    float error = target_speed_1 - speed_1;
+    current_error_1 = error;
+    PWM_1_duty += (uint16_t)(kp * (current_error_1 - last_error_1) + ki * current_error_1);     //增量的PI控制
+    last_error_1 = current_error_1;
+    motor_PWM(PWM_1_duty,motor_id);
 }
 
 //-------------------------------------中断函数(电机PID)计算------------------------------------------------//
@@ -88,6 +109,7 @@ void MOTOR_PID_INST_IRQHandler(void)
     {
         case DL_TIMER_IIDX_LOAD:
             cal_speed(1);
+            MOTOR_PID(1);
             break;
         default:
             break;

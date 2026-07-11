@@ -1,39 +1,25 @@
 #include "sensor.h"
 #include "ti_msp_dl_config.h"
-//------------通过设定每个传感器为一个特定数值，确定一个权重，越靠近中心权重越低，最后使得数值为4-------------//
-float sensor_detect(void)
+
+uint8_t sensor[7] = {0,0,0,0,0,0,0};
+
+//----------------------------------------------GPIO 状态读取-------------------------------------------//
+uint8_t get_gpio_state(GPIO_Regs *gpio_port,uint32_t gpio)
 {
-    uint8_t sensor[7];
-    uint16_t i = 0;
-    uint16_t sum = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_0_PORT, SENSOR_GRP_SNESOR_0_PIN)) {i++; sensor[0] = 1;}else sensor[0] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_1_PORT, SENSOR_GRP_SNESOR_1_PIN)) {i++; sensor[1] = 2;}else sensor[1] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_2_PORT, SENSOR_GRP_SNESOR_2_PIN)) {i++; sensor[2] = 3;}else sensor[2] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_3_PORT, SENSOR_GRP_SNESOR_3_PIN)) {i++; sensor[3] = 4;}else sensor[3] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_4_PORT, SENSOR_GRP_SNESOR_4_PIN)) {i++; sensor[4] = 5;}else sensor[4] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_5_PORT, SENSOR_GRP_SNESOR_5_PIN)) {i++; sensor[5] = 6;}else sensor[5] = 0;
-    if(DL_GPIO_readPin(SENSOR_GRP_SNESOR_6_PORT, SENSOR_GRP_SNESOR_6_PIN)) {i++; sensor[6] = 7;}else sensor[6] = 0;
-    sum = sensor[0] + sensor[1] + sensor[2] + sensor[3] + sensor[4] + sensor[5] + sensor[6];
-    if(i == 0) return 0;
-    else return sum/i;
+    uint32_t high_bits = DL_GPIO_readPins(gpio_port, gpio);
+    if ((high_bits & gpio) != 0 ) return 1;
+    else return 0;
+}
+
+//-----------------------------------------------传感器-----------------------------------------------//
+void sensor_detect()
+{
+    sensor[0] = get_gpio_state(SENSOR_GRP_SNESOR_0_PORT,SENSOR_GRP_SNESOR_0_PIN);
+    sensor[1] = get_gpio_state(SENSOR_GRP_SNESOR_1_PORT,SENSOR_GRP_SNESOR_1_PIN);
+    sensor[2] = get_gpio_state(SENSOR_GRP_SNESOR_2_PORT,SENSOR_GRP_SNESOR_2_PIN);
+    sensor[3] = get_gpio_state(SENSOR_GRP_SNESOR_3_PORT,SENSOR_GRP_SNESOR_3_PIN);
+    sensor[4] = get_gpio_state(SENSOR_GRP_SNESOR_4_PORT,SENSOR_GRP_SNESOR_4_PIN);
+    sensor[5] = get_gpio_state(SENSOR_GRP_SNESOR_5_PORT,SENSOR_GRP_SNESOR_5_PIN);
+    sensor[6] = get_gpio_state(SENSOR_GRP_SNESOR_6_PORT,SENSOR_GRP_SNESOR_6_PIN);
 }
 //------------------------------------------从0到6分别为从左到右---------------------------------------//
-
-//---------------------------------------------速度对应-----------------------------------------------//
-int DifPWM(void)
-{
-    int index = sensor_detect() * 2 + 0.5;
-    switch(index)
-    {
-        case 2: return 500; // sensor 1
-        case 3: return 350; // sensor 1+2
-        case 4: return 200; // sensor 2
-        case 5: return 150;  // sensor 2+3
-        case 6: return 0;   // sensor 3
-        case 7: return -150;  // sensor 3+4
-        case 8: return -200; // sensor 4
-        case 9: return -350; // sensor 4+5
-        case 10: return -500; // sensor 5
-        default: break;
-    }
-}

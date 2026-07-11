@@ -9,6 +9,7 @@
 static float flag_last_state = 0.0f;
 static int flag_DX = 0;
 
+/*
 //--------------------------------------------轨迹检测-----------------------------------------//
 float flag(void)
 {
@@ -65,3 +66,4 @@ void track_lost(void)
         flag_DX = 0;
     }
 }
+*/

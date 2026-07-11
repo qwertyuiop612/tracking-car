@@ -37,22 +37,22 @@
 #include "interrupt.h"
 #include "motor.h"
 
+extern int target_speed_1;
+
 int main(void)
 {
     SYSCFG_DL_init();
 
-    NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);  //编码器定时读取，放在TB6612中断里
+    //debug
+    sensor_detect();
+    //NVIC
+    NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
+    NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
+    //Init
+    motor_init();  //电机初始化
 
-    motor_Init();  //电机初始化
-    while (1) 
+    while (1)
     {
-        if (flag() == 0)  //未丢线
-        {
-            track();  //循迹
-        }
-        else  //丢线
-        {
-            track_lost();  //丢线逻辑
-        }
+
     }
 }

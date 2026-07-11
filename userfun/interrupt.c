@@ -6,7 +6,7 @@
 #include "motor.h"
 
 uint32_t tmp_a = 0;
-//int tmp_b = 0;
+uint32_t tmp_b = 0;
 
 void GROUP1_IRQHandler(void)
 {
@@ -19,7 +19,7 @@ void GROUP1_IRQHandler(void)
         default:
             break;
     }
-    /*switch (DL_GPIO_getPendingInterrupt(GPIOB))
+    switch (DL_GPIO_getPendingInterrupt(GPIOB))
     {
         case TB6612_ENCD_RA_IIDX:
             tmp_b++;
@@ -27,5 +27,5 @@ void GROUP1_IRQHandler(void)
 
         default:
             break;
-    }*/
+    }
 }

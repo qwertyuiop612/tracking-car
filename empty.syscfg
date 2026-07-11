@@ -128,13 +128,15 @@ GPIO4.associatedPins[8].pin.$assign      = "PA7";
 
 PWM1.$name                      = "PWM_0";
 PWM1.timerStartTimer            = true;
-PWM1.ccIndex                    = [0];
 PWM1.pwmMode                    = "EDGE_ALIGN_UP";
 PWM1.timerCount                 = 4000;
 PWM1.PWM_CHANNEL_0.$name        = "ti_driverlib_pwm_PWMTimerCC0";
 PWM1.ccp0PinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric0";
 PWM1.peripheral.$assign         = "TIMG0";
 PWM1.peripheral.ccp0Pin.$assign = "PA12";
+PWM1.peripheral.ccp1Pin.$assign = "PA13";
+PWM1.PWM_CHANNEL_1.$name        = "ti_driverlib_pwm_PWMTimerCC1";
+PWM1.ccp1PinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric1";
 
 SYSCTL.forceDefaultClkConfig = true;
 SYSCTL.clockTreeEn           = true;

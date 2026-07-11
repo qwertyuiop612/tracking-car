@@ -22,4 +22,8 @@ void PWM_duty(int duty,int motor_id)
     {
         DL_Timer_setCaptureCompareValue(PWM_0_INST,duty,GPIO_PWM_0_C0_IDX);
     }
+    else if(motor_id ==1)
+    {
+        DL_Timer_setCaptureCompareValue(PWM_0_INST,duty,GPIO_PWM_0_C1_IDX);
+    }
 }

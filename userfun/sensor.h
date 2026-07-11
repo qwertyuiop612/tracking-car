@@ -2,7 +2,6 @@
 #define SENSOR_H
 #include <stdint.h>
 
-float sensor_detect(void);
-int DifPWM(void);
+void sensor_detect(void);
 
 #endif // SENSOR_H
