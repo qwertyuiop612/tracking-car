@@ -82,3 +82,14 @@ float cal_speed(uint8_t motor_id)
 }
 
 //-------------------------------------中断函数(电机PID)计算------------------------------------------------//
+void MOTOR_PID_INST_IRQHandler(void)
+{
+    switch (DL_Timer_getPendingInterrupt(MOTOR_PID_INST))
+    {
+        case DL_TIMER_IIDX_LOAD:
+            cal_speed(1);
+            break;
+        default:
+            break;
+    }
+}
