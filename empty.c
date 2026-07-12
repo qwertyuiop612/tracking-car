@@ -48,6 +48,6 @@ int main(void)
     WHEEL.target_speed = 800;
     while (1)
     {
-        flag();
+        track();
     }
 }

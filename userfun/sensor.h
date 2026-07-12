@@ -2,6 +2,8 @@
 #define SENSOR_H
 #include <stdint.h>
 
-void sensor_detect(void);
+
+float sensor_detect(void);
+float Difspeed();
 
 #endif // SENSOR_H

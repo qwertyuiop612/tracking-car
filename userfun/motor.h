@@ -14,6 +14,8 @@ struct WHEEL {
 };
 
 extern struct WHEEL WHEEL;
+extern struct WHEEL RIGHT;
+extern struct WHEEL LEFT;
 
 //PWM范围为1000到-1000，对应到duty的4000到-4000，负号表示相反
 

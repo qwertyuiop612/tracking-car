@@ -7,13 +7,19 @@
 
 extern int sensor[7];
 
-//----------------------------------------------丢线检测----------------------------------------------//
-void flag()
+//----------------------------------------------循迹----------------------------------------------//
+void track()
 {
-    sensor_detect();
-    if (sensor[0] && sensor[1] && sensor[2] && sensor[3] && sensor[4] && sensor[5] && sensor[6] == 0)
+    int avrspeed = 600 - fabs(sensor_detect() - 4) * 100;
+    LEFT.target_speed = avrspeed - Difspeed();
+    RIGHT.target_speed = avrspeed + Difspeed();
+    if (sensor_detect() == 0)   //丢线
     {
         direction(1,1);
         direction(2,1);
+    }
+    else if (sensor[0] == sensor[1] == sensor[2] == sensor[3] == sensor[4] == sensor[5] == sensor[6] == 1)  //起点、终点停止
+    {
+        WHEEL.target_speed = 0;
     }
 }
