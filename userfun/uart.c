@@ -1,5 +1,4 @@
 #include "uart.h"
-#include "ti/driverlib/dl_uart.h"
 
 //------------------------------------------发送单个字符------------------------------------//
 void UART_send_char(UART_Regs *uart, const uint8_t chr)
