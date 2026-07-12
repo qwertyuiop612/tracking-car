@@ -2,8 +2,8 @@
 #include "motor.h"
 #include "ti_msp_dl_config.h"
 
-uint8_t sensor[7] = {0,0,0,0,0,0,0};
-int index;
+int sensor[7] = {0,0,0,0,0,0,0};
+uint8_t idx;
 float ALL_num = 0;
 
 //----------------------------------------------GPIO 状态读取-------------------------------------------//
@@ -18,25 +18,25 @@ uint8_t get_gpio_state(GPIO_Regs *gpio_port,uint32_t gpio)
 float sensor_detect()
 {
     int i = 0;
-    float sum =0.0f;
-    sensor[0] = get_gpio_state(SENSOR_GRP_SNESOR_0_PORT,SENSOR_GRP_SNESOR_0_PIN) ? (1 && i++) : 0;
-    sensor[1] = get_gpio_state(SENSOR_GRP_SNESOR_1_PORT,SENSOR_GRP_SNESOR_1_PIN) ? (2 && i++) : 0;
-    sensor[2] = get_gpio_state(SENSOR_GRP_SNESOR_2_PORT,SENSOR_GRP_SNESOR_2_PIN) ? (3 && i++) : 0;
-    sensor[3] = get_gpio_state(SENSOR_GRP_SNESOR_3_PORT,SENSOR_GRP_SNESOR_3_PIN) ? (4 && i++) : 0;
-    sensor[4] = get_gpio_state(SENSOR_GRP_SNESOR_4_PORT,SENSOR_GRP_SNESOR_4_PIN) ? (5 && i++) : 0;
-    sensor[5] = get_gpio_state(SENSOR_GRP_SNESOR_5_PORT,SENSOR_GRP_SNESOR_5_PIN) ? (6 && i++) : 0;
-    sensor[6] = get_gpio_state(SENSOR_GRP_SNESOR_6_PORT,SENSOR_GRP_SNESOR_6_PIN) ? (7 && i++) : 0;
+    int sum = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_0_PORT,SENSOR_GRP_SNESOR_0_PIN)) {sensor[0] = 1 ; i++;} else sensor[0] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_1_PORT,SENSOR_GRP_SNESOR_1_PIN)) {sensor[1] = 2 ; i++;} else sensor[1] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_2_PORT,SENSOR_GRP_SNESOR_2_PIN)) {sensor[2] = 3 ; i++;} else sensor[2] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_3_PORT,SENSOR_GRP_SNESOR_3_PIN)) {sensor[3] = 4 ; i++;} else sensor[3] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_4_PORT,SENSOR_GRP_SNESOR_4_PIN)) {sensor[4] = 5 ; i++;} else sensor[4] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_5_PORT,SENSOR_GRP_SNESOR_5_PIN)) {sensor[5] = 6 ; i++;} else sensor[5] = 0;
+    if (get_gpio_state(SENSOR_GRP_SNESOR_6_PORT,SENSOR_GRP_SNESOR_6_PIN)) {sensor[6] = 7 ; i++;} else sensor[6] = 0;
     sum = sensor[0] + sensor[1] + sensor[2] + sensor[3] + sensor[4] + sensor[5] + sensor[6];
     if (i == 0) ALL_num = 0;
     else ALL_num = sum / i;
-    index = (int) (ALL_num * 2 + 0.5);
+    idx = (ALL_num * 2 + 0.5);
     return ALL_num;
 }
 //------------------------------------------从0到6分别为从左到右---------------------------------------//
 
 //-------------------------------------------速度对应表-----------------------------------------------//
 float Difspeed(){
-    switch (index)
+    switch (idx)
     {
         case 2: //ALL_num = 1
             return 400;

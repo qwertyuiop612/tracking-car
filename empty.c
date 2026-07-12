@@ -40,6 +40,7 @@
 int main(void)
 {
     SYSCFG_DL_init();
+
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
