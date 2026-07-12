@@ -3,7 +3,7 @@
 //------------------------------------------发送单个字符------------------------------------//
 void UART_send_char(UART_Regs *uart, const uint8_t chr)
 {
-	DL_UART_transmitDataBlocking(uart, char);
+	DL_UART_transmitDataBlocking(uart, chr);
 }
 
 //--------------------------------------------发送字符串------------------------------------//
