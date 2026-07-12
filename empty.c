@@ -37,8 +37,6 @@
 #include "interrupt.h"
 #include "motor.h"
 
-extern struct WHEEL;
-
 int main(void)
 {
     SYSCFG_DL_init();
@@ -47,9 +45,9 @@ int main(void)
     NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
     //Init
     motor_init();  //电机初始化
-
+    WHEEL.target_speed = 800;
     while (1)
     {
-
+        flag();
     }
 }

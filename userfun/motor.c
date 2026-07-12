@@ -10,12 +10,9 @@ extern uint32_t tmp_b;
 uint16_t PWM_1_duty = 0;
 uint16_t PWM_2_duty = 0;
 
-struct WHEEL{                         //轮子基本设置
-    float speed;
-    float target_speed;
-    float last_error;
-    float current_error;
-}LEFT={0.0,0.0,0,0},RIGHT={0.0,0.0,0,0};
+struct WHEEL LEFT = {0.0f, 0.0f, 0.0f, 0.0f};
+struct WHEEL RIGHT = {0.0f, 0.0f, 0.0f, 0.0f};
+struct WHEEL WHEEL = {0.0f, 0.0f, 0.0f, 0.0f};
 
 float kp = 0.5;
 float ki = 0.1; 
@@ -141,6 +138,9 @@ float cal_speed(uint8_t motor_id)
 
 void MOTOR_PID(uint8_t motor_id)
 {
+    LEFT.target_speed = WHEEL.target_speed;
+    RIGHT.target_speed = WHEEL.target_speed;
+
     if (motor_id == 1)
     {
         float error = LEFT.target_speed - LEFT.speed;
@@ -152,7 +152,7 @@ void MOTOR_PID(uint8_t motor_id)
     else if (motor_id == 2)
     {
         float error = RIGHT.target_speed - RIGHT.speed;
-        LEFT.current_error = error;
+        RIGHT.current_error = error;
         PWM_2_duty += (uint16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
         RIGHT.last_error = RIGHT.current_error;
         PWM_duty(PWM_2_duty,motor_id);
