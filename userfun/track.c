@@ -11,8 +11,7 @@ extern int sensor[7];
 void track()
 {
     int avrspeed = 600 - fabs(sensor_detect() - 4) * 100;
-    LEFT.target_speed = avrspeed - Difspeed();
-    RIGHT.target_speed = avrspeed + Difspeed();
+
     if (sensor_detect() == 0)   //丢线
     {
         direction(1,1);
@@ -21,5 +20,10 @@ void track()
     else if (sensor[0] == sensor[1] == sensor[2] == sensor[3] == sensor[4] == sensor[5] == sensor[6] == 1)  //起点、终点停止
     {
         WHEEL.target_speed = 0;
+    }
+    else
+    {
+        LEFT.target_speed = avrspeed - Difspeed();
+        RIGHT.target_speed = avrspeed + Difspeed();
     }
 }
