@@ -36,17 +36,23 @@
 #include "track.h"
 #include "interrupt.h"
 #include "motor.h"
+#include "oled.h"
 
 int main(void)
 {
+    //Init
     SYSCFG_DL_init();
+    motor_init();  //电机初始化
+    OLED_Init();   //oled初始化
+    OLED_ColorTurn(0);
+    OLED_DisplayTurn(0);
+    OLED_Clear();
 
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
-    //Init
-    motor_init();  //电机初始化
-    WHEEL.target_speed = 800;
+    NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
+
     while (1)
     {
         track();
