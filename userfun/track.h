@@ -7,6 +7,6 @@
 
 void track(void);
 void track_lost(void);
-float flag(void);
+void flag(void);
 
 #endif // TRACK_H

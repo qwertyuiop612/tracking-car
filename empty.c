@@ -37,14 +37,11 @@
 #include "interrupt.h"
 #include "motor.h"
 
-extern int target_speed_1;
+extern struct WHEEL;
 
 int main(void)
 {
     SYSCFG_DL_init();
-
-    //debug
-    sensor_detect();
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
