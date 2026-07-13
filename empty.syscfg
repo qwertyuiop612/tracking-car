@@ -9,6 +9,8 @@
 /**
  * Import the modules used in this configuration.
  */
+const ADC12         = scripting.addModule("/ti/driverlib/ADC12", {}, false);
+const ADC121        = ADC12.addInstance();
 const GPIO          = scripting.addModule("/ti/driverlib/GPIO", {}, false);
 const GPIO1         = GPIO.addInstance();
 const GPIO2         = GPIO.addInstance();
@@ -22,6 +24,7 @@ const TIMER         = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1        = TIMER.addInstance();
 const UART          = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1         = UART.addInstance();
+const VREF          = scripting.addModule("/ti/driverlib/VREF");
 const ProjectConfig = scripting.addModule("/ti/project_config/ProjectConfig");
 
 /**
@@ -45,6 +48,16 @@ mux12.inputSelect = "zSYSPLLMUX_HFCLK";
 const pinFunction4     = system.clockTree["HFXT"];
 pinFunction4.enable    = true;
 pinFunction4.inputFreq = 40;
+
+ADC121.$name                      = "ADC12_0";
+ADC121.adcMem0vref                = "VREF";
+ADC121.adcMem0chansel             = "DL_ADC12_INPUT_CHAN_2";
+ADC121.repeatMode                 = true;
+ADC121.peripheral.$assign         = "ADC1";
+ADC121.peripheral.adcPin2.$assign = "PA17";
+ADC121.adcPin2Config.$name        = "ti_driverlib_gpio_GPIOPinGeneric6";
+
+const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
 GPIO1.$name                              = "SENSOR_GRP";
 GPIO1.associatedPins.create(7);
@@ -76,8 +89,6 @@ GPIO1.associatedPins[6].$name            = "SNESOR_6";
 GPIO1.associatedPins[6].direction        = "INPUT";
 GPIO1.associatedPins[6].internalResistor = "PULL_UP";
 GPIO1.associatedPins[6].pin.$assign      = "PA14";
-
-const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
 
 GPIO2.$name                              = "SWITCH_GRP";
 GPIO2.associatedPins.create(2);
@@ -181,6 +192,9 @@ UART1.peripheral.txPin.$assign = "PA28";
 UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric4";
 UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric5";
 
+VREF.basicIntVolt           = "DL_VREF_BUFCONFIG_OUTPUT_2_5V";
+VREF.vrefPosPinConfig.$name = "ti_driverlib_gpio_GPIOPinGeneric7";
+
 ProjectConfig.genLibDrivers = true;
 ProjectConfig.genLibCMSIS   = true;
 
@@ -195,3 +209,5 @@ pinFunction4.peripheral.hfxOutPin.$suggestSolution = "PA6";
 Board.peripheral.$suggestSolution                  = "DEBUGSS";
 Board.peripheral.swclkPin.$suggestSolution         = "PA20";
 Board.peripheral.swdioPin.$suggestSolution         = "PA19";
+VREF.peripheral.$suggestSolution                   = "VREF";
+VREF.peripheral.vrefPosPin.$suggestSolution        = "PA23";

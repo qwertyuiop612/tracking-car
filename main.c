@@ -49,6 +49,7 @@ int main(void)
     OLED_ColorTurn(0);
     OLED_DisplayTurn(0);
     OLED_Clear();
+    DL_ADC12_enableConversions(ADC12_0_INST);
 
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
