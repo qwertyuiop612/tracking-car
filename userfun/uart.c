@@ -26,6 +26,6 @@ void UART_0_INST_IRQHandler()
 			UART_send_char(UART_0_INST, rec);
 			break;
 		default:
-			break;
+		break;
 	}
 }

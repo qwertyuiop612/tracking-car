@@ -38,6 +38,8 @@
 #include "motor.h"
 #include "oled.h"
 
+int status = 0;
+
 int main(void)
 {
     //Init
@@ -50,7 +52,7 @@ int main(void)
 
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
-    NVIC_EnableIRQ(TB6612_GPIOB_INT_IRQN);
+    NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 
     while (1)

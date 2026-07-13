@@ -2,11 +2,7 @@
 
 CompileFlags:
    CompilationDatabase: Debug/.clangd
-   Add:
-     - --target=armv7em-none-eabi
 
 Diagnostics:
    Suppress: '*'
 
-Index:
-   Background: Build
