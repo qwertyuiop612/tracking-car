@@ -37,6 +37,7 @@
 #include "interrupt.h"
 #include "motor.h"
 #include "oled.h"
+#include "servo.h"
 
 int status = 0;
 
@@ -44,12 +45,13 @@ int main(void)
 {
     //Init
     SYSCFG_DL_init();
-    motor_init();  //电机初始化
-    OLED_Init();   //oled初始化
+    DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
+    SERVO_init();  //舵机初始化
+    MOTOR_init();  //电机初始化
+    OLED_init();   //oled初始化
     OLED_ColorTurn(0);
     OLED_DisplayTurn(0);
     OLED_Clear();
-    DL_ADC12_enableConversions(ADC12_0_INST);
 
     //NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);

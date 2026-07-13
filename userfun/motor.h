@@ -19,7 +19,7 @@ extern struct WHEEL LEFT;
 
 //PWM范围为1000到-1000，对应到duty的4000到-4000，负号表示相反
 
-void motor_init(void);
+void MOTOR_init(void);
 void motor_PWM(int leftPWM,int rightPWM);
 void direction(uint8_t motor_id , uint8_t dir);
 

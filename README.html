@@ -33,73 +33,132 @@
   </div>
 </header>
 <div id="content">
-  <h1>Readme</h1>
-<h2 id="example-summary">Example Summary</h2>
-<p>Empty project using DriverLib. This example shows a basic empty project using DriverLib with just main file and SysConfig initialization.</p>
-<h2 id="peripherals-pin-assignments">Peripherals &amp; Pin Assignments</h2>
+  <h1>tracking-car</h1>
+<h2 id="example-summary">项目简介</h2>
+<p>基于 TI MSPM0G3507 的智能循迹小车项目。采用 7 路灰度传感器检测线路，双路编码器电机配合 PID 速度环实现精确控制，支持 OLED 显示、舵机控制、串口通信及 ADC 电压检测。</p>
+
+<h2 id="hardware">硬件平台</h2>
+<ul>
+<li><strong>MCU</strong>：TI MSPM0G3507（Cortex-M0+）</li>
+<li><strong>电机驱动</strong>：TB6612（双路直流电机驱动）</li>
+<li><strong>传感器</strong>：7 路灰度循迹传感器</li>
+<li><strong>显示</strong>：0.96 寸 OLED（I2C，SSD1306）</li>
+<li><strong>舵机</strong>：1 路舵机</li>
+<li><strong>编码器</strong>：2 路编码器（左右轮速度反馈）</li>
+<li><strong>系统时钟</strong>：外部 40 MHz 晶振 + PLL 倍频</li>
+</ul>
+
+<h2 id="directory">目录结构</h2>
 <table>
-<thead>
-<tr class="header">
-<th>Peripheral</th>
-<th>Pin</th>
-<th>Function</th>
-</tr>
-</thead>
+<thead><tr><th>文件</th><th>说明</th></tr></thead>
 <tbody>
-<tr class="odd">
-<td>SYSCTL</td>
-<td></td>
-<td></td>
-</tr>
-<tr class="even">
-<td>DEBUGSS</td>
-<td>PA20</td>
-<td>Debug Clock</td>
-</tr>
-<tr class="odd">
-<td>DEBUGSS</td>
-<td>PA19</td>
-<td>Debug Data In Out</td>
-</tr>
+<tr><td>main.c</td><td>主程序：初始化各模块，主循环调用 track()</td></tr>
+<tr><td>empty.syscfg</td><td>SysConfig 配置文件</td></tr>
+<tr><td>userfun/default.c / default.h</td><td>通用函数：延时、PWM 占空比设置</td></tr>
+<tr><td>userfun/sensor.c / sensor.h</td><td>传感器：7 路灰度读取 &amp; 差速查表</td></tr>
+<tr><td>userfun/track.c / track.h</td><td>循迹：综合传感器与电机执行循迹逻辑</td></tr>
+<tr><td>userfun/motor.c / motor.h</td><td>电机：TB6612 驱动、编码器测速、PID 速度环</td></tr>
+<tr><td>userfun/servo.c / servo.h</td><td>舵机：角度初始化与设置</td></tr>
+<tr><td>userfun/oled.c / oled.h / oledfont.h</td><td>OLED：SSD1306 I2C 驱动、字符/图形显示</td></tr>
+<tr><td>userfun/interrupt.c / interrupt.h</td><td>中断：编码器计数、按键状态切换</td></tr>
+<tr><td>userfun/adc.c / adc.h</td><td>ADC：电压采集</td></tr>
+<tr><td>userfun/uart.c / uart.h</td><td>UART：串口收发</td></tr>
 </tbody>
 </table>
-<h2 id="boosterpacks-board-resources-jumper-settings">BoosterPacks, Board Resources &amp; Jumper Settings</h2>
+
+<h2 id="module-desc">模块说明</h2>
+
+<h3>主程序（main.c）</h3>
+<pre><code>SYSCFG_DL_init();
+DL_ADC12_enableConversions(ADC12_0_INST);
+SERVO_init();
+MOTOR_init();
+OLED_init();
+NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
+NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
+NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
+while (1) { track(); }</code></pre>
+<p>初始化顺序：SysConfig → ADC → 舵机 → 电机（含 PID 定时器） → OLED → 中断使能 → 循迹循环。</p>
+
+<h3>循迹（track.c）</h3>
+<p><code>track()</code> 根据 <code>sensor_detect()</code> 返回的线路中心位置计算基础速度，结合 <code>Difspeed()</code> 查表得到的差速值设定左右轮目标速度。检测到 7 路全黑（起点/终点）时停车，丢线时保持直行。</p>
+
+<h3>传感器（sensor.c）</h3>
+<p><code>sensor_detect()</code> 读取 7 路 GPIO 状态，计算加权平均位置（1~7），返回线路中心值。<code>Difspeed()</code> 根据离散化位置查表返回差速值。</p>
+
+<h3>电机（motor.c）</h3>
+<p><code>MOTOR_init()</code> 使能 TB6612、配置 PWM 及 PID 定时器。<code>motor_PWM(leftPWM, rightPWM)</code> 根据正负值控制方向与占空比。<code>cal_speed()</code> 通过编码器脉冲计算实际速度。<code>MOTOR_PID()</code> 增量式 PI 速度环控制，在定时器中断中周期性执行。</p>
+
+<h3>舵机（servo.c）</h3>
+<p><code>SERVO_init()</code> 启动 TIMG7 定时器，设置初始占空比（7.5% ≈ 90°）。<code>SERVO_set(deg)</code> 将 0~180° 角度转换为 PWM 比较值。</p>
+
+<h3>OLED（oled.c）</h3>
+<p>基于 I2C 的 SSD1306 驱动，支持字符显示（12/16/24 字号）、汉字、图形及图片。</p>
+
+<h3>中断（interrupt.c）</h3>
+<p><code>GROUP1_IRQHandler()</code>：GPIOA → 编码器 A 计数；GPIOB → 编码器 B 计数 &amp; 按键切换 <code>status</code>（0~2 循环）。</p>
+
+<h3>ADC（adc.c）</h3>
+<p><code>ADC_get()</code> 启动 ADC12 转换，返回通道 2（PA17）的电压值。</p>
+
+<h3>UART（uart.c）</h3>
+<p><code>UART_send_char()</code> / <code>UART_send_string()</code> 阻塞式发送。接收中断中回显收到的字符。</p>
+
+<h2 id="peripherals-pin-assignments">引脚映射</h2>
+<table>
+<thead><tr><th>外设</th><th>名称</th><th>引脚</th><th>功能</th></tr></thead>
+<tbody>
+<tr><td>DEBUGSS</td><td>SWCLK</td><td>PA20</td><td>调试时钟</td></tr>
+<tr><td>DEBUGSS</td><td>SWDIO</td><td>PA19</td><td>调试数据</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_0</td><td>PA2</td><td>传感器 0（最左）</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_1</td><td>PA24</td><td>传感器 1</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_2</td><td>PB9</td><td>传感器 2</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_3</td><td>PB8</td><td>传感器 3（中间）</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_4</td><td>PA16</td><td>传感器 4</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_5</td><td>PA15</td><td>传感器 5</td></tr>
+<tr><td>SENSOR_GRP</td><td>SNESOR_6</td><td>PA14</td><td>传感器 6（最右）</td></tr>
+<tr><td>SWITCH_GRP</td><td>SWITCH_0</td><td>PB6</td><td>按键 0（状态+1）</td></tr>
+<tr><td>SWITCH_GRP</td><td>SWITCH_1</td><td>PB7</td><td>按键 1（状态+2）</td></tr>
+<tr><td>TB6612</td><td>AIN1</td><td>PA8</td><td>左电机方向 1</td></tr>
+<tr><td>TB6612</td><td>AIN2</td><td>PA9</td><td>左电机方向 2</td></tr>
+<tr><td>TB6612</td><td>STBY</td><td>PB24</td><td>电机驱动使能</td></tr>
+<tr><td>TB6612</td><td>ENCD_LA</td><td>PA22</td><td>左轮编码器 A 相</td></tr>
+<tr><td>TB6612</td><td>ENCD_LB</td><td>PA21</td><td>左轮编码器 B 相</td></tr>
+<tr><td>TB6612</td><td>ENCD_RA</td><td>PB19</td><td>右轮编码器 A 相</td></tr>
+<tr><td>TB6612</td><td>ENCD_RB</td><td>PB20</td><td>右轮编码器 B 相</td></tr>
+<tr><td>TB6612</td><td>BIN1</td><td>PB18</td><td>右电机方向 1</td></tr>
+<tr><td>TB6612</td><td>BIN2</td><td>PA7</td><td>右电机方向 2</td></tr>
+<tr><td>PWM_0</td><td>CCP0</td><td>PA12</td><td>左电机 PWM（TIMG0）</td></tr>
+<tr><td>PWM_0</td><td>CCP1</td><td>PA13</td><td>右电机 PWM（TIMG0）</td></tr>
+<tr><td>SERVO</td><td>CCP1</td><td>PA27</td><td>舵机 PWM（TIMG7）</td></tr>
+<tr><td>OLED</td><td>SCL</td><td>PB2</td><td>I2C 时钟</td></tr>
+<tr><td>OLED</td><td>SDA</td><td>PB3</td><td>I2C 数据</td></tr>
+<tr><td>ADC12_0</td><td>ADC_IN2</td><td>PA17</td><td>ADC 电压采集</td></tr>
+<tr><td>VREF</td><td>VREF+</td><td>PA23</td><td>参考电压 2.5V</td></tr>
+<tr><td>UART_0</td><td>TX</td><td>PA28</td><td>串口发送</td></tr>
+<tr><td>UART_0</td><td>RX</td><td>PA31</td><td>串口接收</td></tr>
+<tr><td>HFXT</td><td>HFXIN</td><td>PA5</td><td>外部 40MHz 晶振</td></tr>
+<tr><td>HFXT</td><td>HFXOUT</td><td>PA6</td><td>外部 40MHz 晶振</td></tr>
+</tbody>
+</table>
+
+<h2 id="boosterpacks-board-resources-jumper-settings">BoosterPacks &amp; 跳线设置</h2>
 <p>Visit <a href="https://www.ti.com/tool/LP-MSPM0G3507">LP_MSPM0G3507</a> for LaunchPad information, including user guide and hardware files.</p>
-<table>
-<thead>
-<tr class="header">
-<th>Pin</th>
-<th>Peripheral</th>
-<th>Function</th>
-<th>LaunchPad Pin</th>
-<th>LaunchPad Settings</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>PA20</td>
-<td>DEBUGSS</td>
-<td>SWCLK</td>
-<td>N/A</td>
-<td><ul><li>PA20 is used by SWD during debugging<br><ul><li><code>J101 15:16 ON</code> Connect to XDS-110 SWCLK while debugging<br><li><code>J101 15:16 OFF</code> Disconnect from XDS-110 SWCLK if using pin in application</ul></ul></td>
-</tr>
-<tr class="even">
-<td>PA19</td>
-<td>DEBUGSS</td>
-<td>SWDIO</td>
-<td>N/A</td>
-<td><ul><li>PA19 is used by SWD during debugging<br><ul><li><code>J101 13:14 ON</code> Connect to XDS-110 SWDIO while debugging<br><li><code>J101 13:14 OFF</code> Disconnect from XDS-110 SWDIO if using pin in application</ul></ul></td>
-</tr>
-</tbody>
-</table>
-<h3 id="device-migration-recommendations">Device Migration Recommendations</h3>
-<p>This project was developed for a superset device included in the LP_MSPM0G3507 LaunchPad. Please visit the <a href="https://software-dl.ti.com/msp430/esd/MSPM0-SDK/latest/docs/english/tools/ccs_ide_guide/doc_guide/doc_guide-srcs/ccs_ide_guide.html#sysconfig-project-migration">CCS User’s Guide</a> for information about migrating to other MSPM0 devices.</p>
-<h3 id="low-power-recommendations">Low-Power Recommendations</h3>
-<p>TI recommends to terminate unused pins by setting the corresponding functions to GPIO and configure the pins to output low or input with internal pullup/pulldown resistor.</p>
-<p>SysConfig allows developers to easily configure unused pins by selecting <strong>Board</strong>→<strong>Configure Unused Pins</strong>.</p>
-<p>For more information about jumper configuration to achieve low-power using the MSPM0 LaunchPad, please visit the <a href="https://www.ti.com/lit/slau873">LP-MSPM0G3507 User’s Guide</a>.</p>
-<h2 id="example-usage">Example Usage</h2>
-<p>Compile, load and run the example.</p>
+<ul>
+<li>调试时 J101 的 13:14（SWDIO）和 15:16（SWCLK）需短接。</li>
+<li>若要在应用中复用 PA19/PA20，需断开对应跳线帽。</li>
+</ul>
+
+<h2 id="status-machine">状态机</h2>
+<p><code>status</code> 变量通过 SWITCH_0（+1）和 SWITCH_1（+2）按键在 0、1、2 之间循环切换，可用于在 track() 中实现不同运行模式（如循迹模式、调试模式、蓝牙遥控模式等）。</p>
+
+<h2 id="example-usage">编译与烧录</h2>
+<ol>
+<li>使用 Code Composer Studio（Theia）打开工程。</li>
+<li>通过 SysConfig 修改引脚配置后，重新生成 ti_msp_dl_config.c/h。</li>
+<li>执行 build 任务编译工程。</li>
+<li>通过 XDS-110 调试器烧录到 MSPM0G3507 LaunchPad。</li>
+</ol>
 <!-- Close div from before_body_template.html -->
 </div>
 <footer id="tiFooter">
