@@ -28,7 +28,8 @@ float sensor_detect()
     if (get_gpio_state(SENSOR_GRP_SNESOR_6_PORT,SENSOR_GRP_SNESOR_6_PIN)) {sensor[6] = 7 ; i++;} else sensor[6] = 0;
     sum = sensor[0] + sensor[1] + sensor[2] + sensor[3] + sensor[4] + sensor[5] + sensor[6];
     if (i == 0) ALL_num = 0;
-    else ALL_num = sum / i;
+    else
+        ALL_num = (float)sum / i;
     idx = (ALL_num * 2 + 0.5);
     return ALL_num;
 }

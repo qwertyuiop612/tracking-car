@@ -17,7 +17,7 @@ void track()
         direction(1,1);
         direction(2,1);
     }
-    else if (sensor[0] == sensor[1] == sensor[2] == sensor[3] == sensor[4] == sensor[5] == sensor[6] == 1)  //起点、终点停止
+    else if (sensor[0] && sensor[1] && sensor[2] && sensor[3] && sensor[4] && sensor[5] && sensor[6]) // 起点、终点停止
     {
         WHEEL.target_speed = 0;
     }

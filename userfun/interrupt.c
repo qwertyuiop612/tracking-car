@@ -11,7 +11,7 @@ extern int status;
 
 uint8_t get_key_state(uint32_t key)
 {
-    uint8_t high_pins = DL_GPIO_readPins(SWITCH_GRP_PORT, key);
+    uint32_t high_pins = DL_GPIO_readPins(SWITCH_GRP_PORT, key);
     if((high_pins & key) != 0)
         return 1;
     else

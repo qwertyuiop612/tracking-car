@@ -39,7 +39,7 @@
 #include "oled.h"
 #include "servo.h"
 
-int status = 0;
+volatile int status = 0;
 
 int main(void)
 {

@@ -112,7 +112,7 @@ void direction(uint8_t motor_id , uint8_t dir)
         }
         else if(dir == 2)   //静止
         {
-            DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
+            DL_GPIO_setPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         }
     }
 }
@@ -120,29 +120,31 @@ void direction(uint8_t motor_id , uint8_t dir)
 //------------------------------------------------速度计算------------------------------------------------//
 float cal_speed(uint8_t motor_id)
 {
-    float speed = 0.0;
     if (motor_id == 1)
     {
         LEFT.speed = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //1速度 mm/s  200为频率
         tmp_a = 0;
+        return LEFT.speed;
     }
     if (motor_id == 2)
     {
         RIGHT.speed = (float)tmp_b / ENCODE * PI * WHEEL_DIAMETER * 200;  //2速度 mm/s
         tmp_b = 0;
+        return RIGHT.speed;
     }
-    return speed;
 }
 
 //------------------------------------------PID(仅使用PI速度环控制)---------------------------------------------------//
 
 void MOTOR_PID(uint8_t motor_id)
 {
-    LEFT.target_speed = WHEEL.target_speed;
-    RIGHT.target_speed = WHEEL.target_speed;
+    // LEFT.target_speed = WHEEL.target_speed;
+    // RIGHT.target_speed = WHEEL.target_speed;
 
     if (motor_id == 1)
     {
+        if (PWM_1_duty > 4000)
+            PWM_1_duty = 4000;
         float error = LEFT.target_speed - LEFT.speed;
         LEFT.current_error = error;
         PWM_1_duty += (uint16_t)(kp * (LEFT.current_error - LEFT.last_error) + ki * LEFT.current_error);     //增量的PI控制
@@ -151,6 +153,8 @@ void MOTOR_PID(uint8_t motor_id)
     }
     else if (motor_id == 2)
     {
+        if (PWM_2_duty > 4000)
+            PWM_2_duty = 4000;
         float error = RIGHT.target_speed - RIGHT.speed;
         RIGHT.current_error = error;
         PWM_2_duty += (uint16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
