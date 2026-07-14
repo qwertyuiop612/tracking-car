@@ -39,6 +39,7 @@
 #include "oled.h"
 #include "servo.h"
 #include "mpu_port.h"
+#include "gyro.h"
 
 volatile int status = 0;
 extern volatile uint32_t sys_tick_ms;
@@ -53,6 +54,7 @@ int main(void)
     //Init
     SYSCFG_DL_init();
     DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
+    GYRO_Init();
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
     OLED_Init();                                // oled初始化

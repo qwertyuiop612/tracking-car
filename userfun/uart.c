@@ -16,6 +16,15 @@ void UART_send_string(UART_Regs *uart, const char *str)
 	}
 }
 
+//----------------------------------------发送字节数组（陀螺仪通信）-------------------------//
+void UART_send_buffer(UART_Regs *uart, const uint8_t *buf, const uint8_t len)
+{
+	for (int i = 0; i < len; i++)
+	{
+		UART_send_char(uart, buf[i]);
+	}
+}
+
 //------------------------------------------中断接收字符------------------------------------//
 void UART_0_INST_IRQHandler()
 {
