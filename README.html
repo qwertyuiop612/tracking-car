@@ -35,13 +35,13 @@
 <div id="content">
   <h1>tracking-car</h1>
 <h2 id="example-summary">项目简介</h2>
-<p>基于 TI MSPM0G3507 的智能循迹小车项目。采用 7 路灰度传感器检测线路，双路编码器电机配合 PID 速度环实现精确控制，集成 MPU6050 六轴陀螺仪（DMP 姿态解算）、OLED 显示、舵机控制、串口通信及 ADC 电压检测。</p>
+<p>基于 TI MSPM0G3507 的智能循迹小车项目。采用 7 路灰度传感器检测线路，双路编码器电机配合 PID 速度环实现精确控制，集成 MPU6050 六轴陀螺仪（DMP 姿态解算）+ 串口 Modbus 陀螺仪、OLED 显示、舵机控制、串口通信及 ADC 电压检测。</p>
 
 <h2 id="hardware">硬件平台</h2>
 <ul>
 <li><strong>MCU</strong>：TI MSPM0G3507（Cortex-M0+，80 MHz）</li>
 <li><strong>电机驱动</strong>：TB6612（双路直流电机驱动）</li>
-<li><strong>传感器</strong>：7 路灰度循迹传感器 + MPU6050 六轴陀螺仪</li>
+<li><strong>传感器</strong>：7 路灰度循迹传感器 + MPU6050 六轴陀螺仪 + 串口 Modbus 陀螺仪</li>
 <li><strong>显示</strong>：0.96 寸 OLED（I2C，SSD1306）</li>
 <li><strong>舵机</strong>：1 路舵机</li>
 <li><strong>编码器</strong>：2 路编码器（左右轮速度反馈）</li>
@@ -59,9 +59,10 @@
 <tr><td>userfun/track.c / track.h</td><td>循迹：综合传感器与电机执行循迹逻辑</td></tr>
 <tr><td>userfun/motor.c / motor.h</td><td>电机：TB6612 驱动、编码器测速、PID 速度环</td></tr>
 <tr><td>userfun/servo.c / servo.h</td><td>舵机：角度初始化与设置</td></tr>
+<tr><td>userfun/gyro.c / gyro.h</td><td>串口陀螺仪：Modbus RTU 协议通信</td></tr>
 <tr><td>userfun/interrupt.c / interrupt.h</td><td>中断：编码器计数、按键状态切换</td></tr>
 <tr><td>userfun/adc.c / adc.h</td><td>ADC：电压采集</td></tr>
-<tr><td>userfun/uart.c / uart.h</td><td>UART：串口收发</td></tr>
+<tr><td>userfun/uart.c / uart.h</td><td>UART：串口收发 + 字节数组发送</td></tr>
 <tr><td>userfun/OLED/oled.c / oled.h / oledfont.h</td><td>OLED：SSD1306 硬件 I2C 驱动及字库</td></tr>
 <tr><td>userfun/mpu6050/mpu_port.c / mpu_port.h</td><td>MPU6050 平台移植层（I2C 读写、时基）</td></tr>
 <tr><td>userfun/mpu6050/inv_mpu.c / inv_mpu.h</td><td>InvenSense 官方 MPU 驱动库</td></tr>
@@ -75,6 +76,7 @@
 <h3>主程序（main.c）</h3>
 <pre><code>SYSCFG_DL_init();
 DL_ADC12_enableConversions(ADC12_0_INST);
+GYRO_Init();
 SERVO_Init();
 MOTOR_Init();
 OLED_Init();
@@ -86,7 +88,7 @@ NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
 NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
 NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 while (1) { track(); }</code></pre>
-<p>初始化顺序：SysConfig → ADC → 舵机 → 电机（含 PID 定时器） → OLED → MPU6050/DMP → 中断使能 → 循迹循环。<code>status</code>（volatile int）在中断中由按键修改，可切换运行模式。</p>
+<p>初始化顺序：SysConfig → ADC → 串口陀螺仪 → 舵机 → 电机（含 PID 定时器） → OLED → MPU6050/DMP → 中断使能 → 循迹循环。</p>
 
 <h3>循迹（track.c）</h3>
 <p><code>track()</code> 调用 <code>sensor_detect()</code> 获取线路中心计算基础速度，结合 <code>Difspeed()</code> 查表差速值。丢线时两轮正向直行，7 路全触发（起点/终点）时停车，正常时差速转向。</p>
@@ -103,6 +105,9 @@ while (1) { track(); }</code></pre>
 <h3>舵机（servo.c）</h3>
 <p><code>SERVO_Init()</code> 启动 TIMG7，初始占空比 7.5% ≈ 90°。<code>SERVO_set(deg)</code> 将 0~180° 转换为 PWM 比较值。</p>
 
+<h3>串口陀螺仪（gyro.c）</h3>
+<p>Modbus RTU 协议，从机地址 0x0A，波特率 1,152,000（UART3）。<code>GYRO_Init()</code> 发送首条查询命令触发数据返回。<code>GYRO_SendQuery()</code> 发送读保持寄存器命令。<code>GYRO_GetData()</code> 返回解析后的角度和角速度。状态机逐字节解析响应帧，CRC16 校验。帧格式：<code>[0x0A, 0x03, 0x04, AngleH, AngleL, DPS_H, DPS_L, CRC_L, CRC_H]</code>。</p>
+
 <h3>OLED（OLED/oled.c）</h3>
 <p>硬件 I2C（I2C1）驱动 SSD1306，128×64 分辨率。支持 12/16/24 点阵字符、汉字、图形及图片显示。</p>
 
@@ -110,7 +115,7 @@ while (1) { track(); }</code></pre>
 <p><code>GROUP1_IRQHandler()</code>：GPIOA → 左轮编码器计数；GPIOB → 右轮编码器计数 + 按键切换 status（0~2 循环）。<code>sysTick_Handler()</code>（main.c）：毫秒时基累加。</p>
 
 <h3>ADC / UART</h3>
-<p><code>ADC_get()</code> 采集 PA17 电压值；串口阻塞式发送 + 中断接收回显。</p>
+<p><code>ADC_get()</code> 采集 PA17 电压值。<code>UART_send_char()</code> / <code>UART_send_string()</code> 阻塞式发送，<code>UART_send_buffer()</code> 字节数组发送（陀螺仪 Modbus 查询），接收中断回显。</p>
 
 <h2 id="peripherals-pin-assignments">引脚映射</h2>
 <table>
@@ -147,6 +152,8 @@ while (1) { track(); }</code></pre>
 <tr><td>VREF</td><td>VREF+</td><td>PA23</td><td>参考电压 2.5V</td></tr>
 <tr><td>UART_0</td><td>TX</td><td>PA28</td><td>串口发送</td></tr>
 <tr><td>UART_0</td><td>RX</td><td>PA31</td><td>串口接收</td></tr>
+<tr><td>GYRO</td><td>TX</td><td>PA26</td><td>陀螺仪 UART3 发送（1.152M）</td></tr>
+<tr><td>GYRO</td><td>RX</td><td>PA25</td><td>陀螺仪 UART3 接收（1.152M）</td></tr>
 <tr><td>HFXT</td><td>HFXIN</td><td>PA5</td><td>外部 40MHz 晶振</td></tr>
 <tr><td>HFXT</td><td>HFXOUT</td><td>PA6</td><td>外部 40MHz 晶振</td></tr>
 </tbody>

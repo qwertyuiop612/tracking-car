@@ -1,12 +1,12 @@
 # tracking-car
 
-基于 TI MSPM0G3507 的智能循迹小车项目。采用 7 路灰度传感器检测线路，双路编码器电机配合 PID 速度环实现精确控制，集成 MPU6050 六轴陀螺仪（DMP 姿态解算）、OLED 显示、舵机控制、串口通信及 ADC 电压检测。
+基于 TI MSPM0G3507 的智能循迹小车项目。采用 7 路灰度传感器检测线路，双路编码器电机配合 PID 速度环实现精确控制，集成 MPU6050 六轴陀螺仪（DMP 姿态解算）+ 串口 Modbus 陀螺仪、OLED 显示、舵机控制、串口通信及 ADC 电压检测。
 
 ## 硬件平台
 
 - **MCU**：TI MSPM0G3507（Cortex-M0+，80 MHz）
 - **电机驱动**：TB6612（双路直流电机驱动）
-- **传感器**：7 路灰度循迹传感器 + MPU6050 六轴陀螺仪
+- **传感器**：7 路灰度循迹传感器 + MPU6050 六轴陀螺仪 + 串口 Modbus 陀螺仪
 - **显示**：0.96 寸 OLED（I2C，SSD1306）
 - **舵机**：1 路舵机
 - **编码器**：2 路编码器（左右轮速度反馈）
@@ -23,9 +23,10 @@
 │   ├── track.c / track.h           # 循迹：综合传感器与电机执行循迹逻辑
 │   ├── motor.c / motor.h           # 电机：TB6612 驱动、编码器测速、PID 速度环
 │   ├── servo.c / servo.h           # 舵机：角度初始化与设置
+│   ├── gyro.c / gyro.h             # 串口陀螺仪：Modbus RTU 协议通信
 │   ├── interrupt.c / interrupt.h   # 中断：编码器计数、按键状态切换
 │   ├── adc.c / adc.h               # ADC：电压采集
-│   ├── uart.c / uart.h             # UART：串口收发
+│   ├── uart.c / uart.h             # UART：串口收发 + 字节数组发送
 │   ├── OLED/
 │   │   ├── oled.c / oled.h         # OLED：SSD1306 硬件 I2C 驱动
 │   │   └── oledfont.h              # 字库（12/16/24 点阵 ASCII + 汉字）
@@ -47,6 +48,7 @@
 ```c
 SYSCFG_DL_init();
 DL_ADC12_enableConversions(ADC12_0_INST);
+GYRO_Init();
 SERVO_Init();
 MOTOR_Init();
 OLED_Init();
@@ -60,7 +62,7 @@ NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 while (1) { track(); }
 ```
 
-初始化顺序：SysConfig → ADC → 舵机 → 电机（含 PID 定时器） → OLED → MPU6050/DMP → 中断使能 → 循迹循环。
+初始化顺序：SysConfig → ADC → 串口陀螺仪 → 舵机 → 电机（含 PID 定时器） → OLED → MPU6050/DMP → 中断使能 → 循迹循环。
 
 `status` 变量（`volatile int`）在中断中由按键修改，可在 `track()` 中根据状态值实现多模式切换。
 
@@ -88,6 +90,16 @@ while (1) { track(); }
 
 - `SERVO_Init()`：启动 TIMG7，初始占空比 7.5%（≈ 90°）
 - `SERVO_set(deg)`：0~180° 角度 → PWM 比较值
+
+### 串口陀螺仪（gyro.c）
+
+- Modbus RTU 协议，从机地址 0x0A，波特率 1,152,000（UART3）
+- `GYRO_Init()`：发送首条查询命令触发数据返回
+- `GYRO_SendQuery()`：发送读保持寄存器命令（地址 0x003D，读 2 个寄存器）
+- `GYRO_GetData(GyroData_t *data)`：返回解析后的角度 (°) 和角速度 (°/s)
+- `GYRO_ParseFrame()`：状态机逐字节解析响应帧，CRC16 校验
+- 帧格式：`[0x0A, 0x03, 0x04, AngleH, AngleL, DPS_H, DPS_L, CRC_L, CRC_H]`
+- 比例因子：ANGLE_SCALE = 9.77，DPS_SCALE = 100
 
 ### OLED（OLED/oled.c）
 
@@ -120,6 +132,7 @@ while (1) { track(); }
 ### UART（uart.c）
 
 - `UART_send_char()` / `UART_send_string()`：阻塞式发送
+- `UART_send_buffer()`：字节数组发送（陀螺仪 Modbus 查询用）
 - `UART_0_INST_IRQHandler()`：接收中断回显
 
 ## SysConfig 引脚映射
@@ -157,6 +170,8 @@ while (1) { track(); }
 | VREF | VREF+ | PA23 | ADC 参考电压 2.5V |
 | UART_0 | TX | PA28 | 串口发送 |
 | UART_0 | RX | PA31 | 串口接收 |
+| GYRO | TX | PA26 | 陀螺仪 UART3 发送（1.152M） |
+| GYRO | RX | PA25 | 陀螺仪 UART3 接收（1.152M） |
 | HFXT | HFXIN | PA5 | 外部 40MHz 晶振 |
 | HFXT | HFXOUT | PA6 | 外部 40MHz 晶振 |
 
