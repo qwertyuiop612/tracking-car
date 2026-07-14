@@ -22,29 +22,6 @@ static uint16_t CRC16(const uint8_t *data, uint16_t len)
     return crc;
 }
 
-//--------------------------发送 Modbus 查询命令---------------------------//
-// 发送读保持寄存器命令: [Addr, 0x03, RegH, RegL, CountH, CountL, CRC_L, CRC_H]
-// 读取 2 个寄存器（角度 + 角速度）
-void GYRO_SendQuery(void)
-{
-    uint8_t cmd[6] = {
-        GYRO_SLAVE_ADDR,            // 从机地址 0x0A
-        0x03,                       // 功能码：读保持寄存器
-        (GYRO_REG_ANGLE >> 8),      // 起始寄存器地址高字节
-        (GYRO_REG_ANGLE & 0xFF),    // 起始寄存器地址低字节
-        0x00,                       // 寄存器数量高字节
-        0x02                        // 寄存器数量低字节（读2个寄存器=4字节）
-    };
-    uint16_t crc = CRC16(cmd, 6);
-
-    uint8_t tx_buf[8];
-    for (int i = 0; i < 6; i++) tx_buf[i] = cmd[i];
-    tx_buf[6] = crc & 0xFF;         // CRC 低字节在前
-    tx_buf[7] = crc >> 8;           // CRC 高字节在后
-
-    UART_send_buffer(GYRO_INST, tx_buf, 8);
-}
-
 //-----------------------------状态机解析接收帧----------------------------//
 // 帧格式: [0x0A, 0x03, 0x04, AngleH, AngleL, DPS_H, DPS_L, CRC_L, CRC_H]
 static uint8_t  rx_state = 0;
@@ -63,7 +40,7 @@ static void GYRO_ParseFrame(uint8_t byte)
         break;
     case 1:     // 等待功能码 0x03
         if (byte == 0x03) {
-            rx_buf[1] = byte;
+            rx_buf[rx_idx++] = byte;
             rx_state = 2;
         } else {
             rx_state = 0;
@@ -71,7 +48,7 @@ static void GYRO_ParseFrame(uint8_t byte)
         break;
     case 2:     // 等待字节数 0x04
         if (byte == 0x04) {
-            rx_buf[2] = byte;
+            rx_buf[rx_idx++] = byte;
             rx_state = 3;
         } else {
             rx_state = 0;
@@ -108,16 +85,48 @@ void GYRO_INST_IRQHandler(void)
         GYRO_ParseFrame(rec);
         break;
     }
+    case DL_UART_IIDX_OVERRUN_ERROR:
+    {
+        DL_UART_clearInterruptStatus(GYRO_INST, DL_UART_IIDX_OVERRUN_ERROR);
+        (void)DL_UART_receiveData(GYRO_INST);
+        break;
+    }
     default:
         break;
     }
 }
 
+//---------------------------发送 Modbus 查询命令(可选)---------------------//
+// 发送: [Addr, 0x03, RegH, RegL, 0x00, 0x02, CRC_L, CRC_H]
+// 0x003D 为常用角度寄存器起始地址，需根据实际模块手册确认
+#define GYRO_REG_ANGLE_START 0x003D
+
+void GYRO_SendQuery(void)
+{
+    uint8_t cmd[6] = {
+        GYRO_SLAVE_ADDR,
+        0x03,
+        (GYRO_REG_ANGLE_START >> 8),
+        (GYRO_REG_ANGLE_START & 0xFF),
+        0x00,
+        0x02};
+    uint16_t crc = CRC16(cmd, 6);
+
+    uint8_t tx_buf[8];
+    for (int i = 0; i < 6; i++)
+        tx_buf[i] = cmd[i];
+    tx_buf[6] = crc & 0xFF;
+    tx_buf[7] = crc >> 8;
+
+    UART_send_buffer(GYRO_INST, tx_buf, 8);
+}
+
 //----------------------------------初始化---------------------------------//
+// SYSCFG_DL_init 已配置好 UART3 + RX 中断，这里只需开 NVIC
 void GYRO_Init(void)
 {
-    // 发送 Modbus 查询命令，触发陀螺仪返回数据
-    GYRO_SendQuery();
+    NVIC_ClearPendingIRQ(GYRO_INST_INT_IRQN);
+    NVIC_EnableIRQ(GYRO_INST_INT_IRQN);
 }
 
 //------------------------------角度归一化 ±180°---------------------------//
@@ -137,12 +146,12 @@ int GYRO_GetData(GyroData_t *data)
     __disable_irq();
     data->angle_raw = gyro_angle_raw;
     data->dps_raw   = gyro_dps_raw;
+    gyro_rx_done = 0; // 先清标志再开中断，避免竞态
     __enable_irq();
 
     // 转换为浮点值
     data->angle_deg = WrapAngle180(data->angle_raw / GYRO_ANGLE_SCALE);
     data->dps       = data->dps_raw / GYRO_DPS_SCALE;
 
-    gyro_rx_done = 0;   // 清除标志
     return 1;
 }

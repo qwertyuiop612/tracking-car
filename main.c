@@ -40,9 +40,13 @@
 #include "servo.h"
 #include "mpu_port.h"
 #include "gyro.h"
+#include "stdio.h"
 
 volatile int status = 0;
 extern volatile uint32_t sys_tick_ms;
+GyroData_t gyro_data;
+char oled_str1[50];
+char oled_str2[50];
 
 void sysTick_Handler(void)
 {
@@ -71,6 +75,14 @@ int main(void)
 
     while (1)
     {
+        if (GYRO_GetData(&gyro_data))
+        {
+            sprintf(oled_str1, "angle deg = %.2f", gyro_data.angle_deg);
+            OLED_ShowString(0, 0, (u8 *)oled_str1, 127);
+            sprintf(oled_str2, "dps = %.2f", gyro_data.dps);
+            OLED_ShowString(0, 23, (u8 *)oled_str2, 127);
+            OLED_Refresh();
+        }
         track();
     }
 }

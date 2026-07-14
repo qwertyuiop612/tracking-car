@@ -238,8 +238,8 @@ UART1.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric4";
 UART1.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric5";
 
 UART2.$name                            = "GYRO";
-UART2.targetBaudRate                   = 1152000;
 UART2.enabledInterrupts                = ["RX"];
+UART2.targetBaudRate                   = 115200;
 UART2.peripheral.$assign               = "UART3";
 UART2.peripheral.rxPin.$assign         = "PA25";
 UART2.peripheral.txPin.$assign         = "PA26";
