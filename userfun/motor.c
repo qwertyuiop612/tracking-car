@@ -20,7 +20,7 @@ float kd = 0.1;
 float integral = 0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
-void MOTOR_init(void)
+void MOTOR_Init(void)
 {
     DL_GPIO_setPins(TB6612_STBY_PORT,TB6612_STBY_PIN);  //使能电机驱动芯片
     DL_Timer_startCounter(PWM_0_INST);

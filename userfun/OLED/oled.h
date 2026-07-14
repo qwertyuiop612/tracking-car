@@ -324,7 +324,7 @@ void OLED_ShowPicture(u8 x0,u8 y0,u8 x1,u8 y1,u8 BMP[]);
  * - 一般在 main() 中只需调用一次
  * - 初始化完成后通常会清屏
  */
-void OLED_init(void);
+void OLED_Init(void);
 //showstring要和refresh一起用
 
 #endif

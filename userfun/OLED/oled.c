@@ -284,7 +284,7 @@ void OLED_ShowPicture(u8 x0,u8 y0,u8 x1,u8 y1,u8 BMP[])
 }
 
 //OLED的初始化
-void OLED_init(void)
+void OLED_Init(void)
 {
 	// 4针OLED没有RST引脚，直接延时等待屏幕内部RC电路上电复位完成
 	delay_ms(100);

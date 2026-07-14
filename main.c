@@ -38,22 +38,31 @@
 #include "motor.h"
 #include "oled.h"
 #include "servo.h"
+#include "mpu_port.h"
 
 volatile int status = 0;
+extern volatile uint32_t sys_tick_ms;
+
+void sysTick_Handler(void)
+{
+    sys_tick_ms++;
+}
 
 int main(void)
 {
     //Init
     SYSCFG_DL_init();
     DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
-    SERVO_init();  //舵机初始化
-    MOTOR_init();  //电机初始化
-    OLED_init();   //oled初始化
+    SERVO_Init();                               // 舵机初始化
+    MOTOR_Init();                               // 电机初始化
+    OLED_Init();                                // oled初始化
     OLED_ColorTurn(0);
     OLED_DisplayTurn(0);
     OLED_Clear();
+    while (DMP_Init()) // 陀螺仪初始化
+        ;
 
-    //NVIC
+    // NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);

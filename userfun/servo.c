@@ -1,7 +1,7 @@
 #include "servo.h"
 
 //-------------------------------------舵机初始化---------------------------------//
-void SERVO_init()
+void SERVO_Init()
 {
     DL_Timer_startCounter(SERVO_INST);
     DL_Timer_setCaptureCompareValue(SERVO_INST,50,GPIO_SERVO_C1_IDX);
