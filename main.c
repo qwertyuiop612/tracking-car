@@ -40,6 +40,7 @@
 #include "servo.h"
 #include "mpu_port.h"
 #include "gyro.h"
+#include "uart.h"
 #include "stdio.h"
 
 volatile int status = 0;
@@ -48,7 +49,11 @@ GyroData_t gyro_data;
 char oled_str1[50];
 char oled_str2[50];
 
-void sysTick_Handler(void)
+// VOFA+ 调试用（用简单计数器，不依赖SysTick）
+static uint32_t vofa_counter = 0;
+#define VOFA_INTERVAL 20000 // 主循环每20k次发一帧
+
+void SysTick_Handler(void)
 {
     sys_tick_ms++;
 }
@@ -61,28 +66,32 @@ int main(void)
     GYRO_Init();
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
-    OLED_Init();                                // oled初始化
-    OLED_ColorTurn(0);
-    OLED_DisplayTurn(0);
-    OLED_Clear();
-    while (DMP_Init()) // 陀螺仪初始化
-        ;
 
     // NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
 
+    // 方向 + STBY + 启动PWM（为PID提供初始基准值）
+    direction(1, 1);                                    // 左轮正转
+    direction(2, 1);                                    // 右轮正转
+    DL_GPIO_setPins(TB6612_STBY_PORT, TB6612_STBY_PIN); // 使能驱动
+    LEFT.target_speed = 500;
+    RIGHT.target_speed = 500;
+
+    // 所有配置就绪后，启动PID定时器
+    DL_Timer_startCounter(MOTOR_PID_INST);
+    __enable_irq(); // 全局中断使能，PID 接管
+
     while (1)
     {
-        if (GYRO_GetData(&gyro_data))
+        // VOFA+ 调试输出
+        if (++vofa_counter >= VOFA_INTERVAL)
         {
-            sprintf(oled_str1, "angle deg = %.2f", gyro_data.angle_deg);
-            OLED_ShowString(0, 0, (u8 *)oled_str1, 127);
-            sprintf(oled_str2, "dps = %.2f", gyro_data.dps);
-            OLED_ShowString(0, 23, (u8 *)oled_str2, 127);
-            OLED_Refresh();
+            vofa_counter = 0;
+            uart_printf("%.1f,%.1f,%d,%.1f,%.1f,%d\n",
+                        LEFT.target_speed, LEFT.speed, PWM_1_duty,
+                        RIGHT.target_speed, RIGHT.speed, PWM_2_duty);
         }
-        track();
     }
 }

@@ -14,22 +14,26 @@ struct WHEEL LEFT = {0.0f, 0.0f, 0.0f, 0.0f};
 struct WHEEL RIGHT = {0.0f, 0.0f, 0.0f, 0.0f};
 struct WHEEL WHEEL = {0.0f, 0.0f, 0.0f, 0.0f};
 
-float kp = 0.5;
-float ki = 0.1; 
+float kp = 2.0;
+float ki = 0.5;
 float kd = 0.1; 
 float integral = 0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
 void MOTOR_Init(void)
 {
-    DL_GPIO_setPins(TB6612_STBY_PORT,TB6612_STBY_PIN);  //使能电机驱动芯片
     DL_Timer_startCounter(PWM_0_INST);
     DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);  //设置电机方向为静止
     DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
     DL_Timer_setCaptureCompareValue(PWM_0_INST,0,GPIO_PWM_0_C0_IDX);
     DL_Timer_setCaptureCompareValue(PWM_0_INST,0,GPIO_PWM_0_C1_IDX);
-    DL_Timer_startCounter(MOTOR_PID_INST);
-    NVIC_EnableIRQ(MOTOR_PID_INST_INT_IRQN);
+    NVIC_EnableIRQ(MOTOR_PID_INST_INT_IRQN); // NVIC使能，定时器在main中启动
+}
+
+// 在方向和PWM配置完成后使能电机驱动
+void MOTOR_Enable(void)
+{
+    DL_GPIO_setPins(TB6612_STBY_PORT, TB6612_STBY_PIN);
 }
 
 //-----------------------------------------------电机转动设置------------------------------------------------//
@@ -41,40 +45,45 @@ void motor_PWM(int leftPWM,int rightPWM)
     {
         DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
         DL_GPIO_clearPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
-        PWM_duty(leftPWM,0);
+        PWM_1_duty = leftPWM;
+        PWM_duty(leftPWM, 1); // 左轮 → C0 (PA12)
     }
     else if(leftPWM < 0)  //左轮反转
     {
         DL_GPIO_clearPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
         DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
         leftPWM = -leftPWM;
-        PWM_duty(leftPWM,0);
+        PWM_1_duty = leftPWM;
+        PWM_duty(leftPWM, 1); // 左轮 → C0 (PA12)
     }
     else  //左轮静止
     {
         DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
         DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
-        PWM_duty(0,0);
-
+        PWM_1_duty = 0;
+        PWM_duty(0, 1); // 左轮 → C0 (PA12)
     }
     if(rightPWM > 0)  //右轮正转
     {
         DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
         DL_GPIO_clearPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
-        PWM_duty(rightPWM,1);
+        PWM_2_duty = rightPWM;
+        PWM_duty(rightPWM, 2); // 右轮 → C1 (PA13)
     }
     else if(rightPWM < 0)  //右轮反转
     {
         DL_GPIO_clearPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
         DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
         rightPWM = -rightPWM;
-        PWM_duty(rightPWM,1);
+        PWM_2_duty = rightPWM;
+        PWM_duty(rightPWM, 2); // 右轮 → C1 (PA13)
     }
     else  //右轮静止
     {
         DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
         DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
-        PWM_duty(0,1);
+        PWM_2_duty = 0;
+        PWM_duty(0, 2); // 右轮 → C1 (PA13)
     }
 }
 
@@ -122,44 +131,53 @@ float cal_speed(uint8_t motor_id)
 {
     if (motor_id == 1)
     {
-        LEFT.speed = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 200;  //1速度 mm/s  200为频率
+        LEFT.speed = (float)tmp_a / ENCODE * PI * WHEEL_DIAMETER * 100; // 1速度 mm/s  200为频率
         tmp_a = 0;
         return LEFT.speed;
     }
     if (motor_id == 2)
     {
-        RIGHT.speed = (float)tmp_b / ENCODE * PI * WHEEL_DIAMETER * 200;  //2速度 mm/s
+        RIGHT.speed = (float)tmp_b / ENCODE * PI * WHEEL_DIAMETER * 100; // 2速度 mm/s
         tmp_b = 0;
         return RIGHT.speed;
     }
 }
 
 //------------------------------------------PID(仅使用PI速度环控制)---------------------------------------------------//
+// 注意: PWM 为 INIT_VAL_LOW 极性，CC值越大→占空比越小
+// 因此 error = 实际速度 - 目标速度（电机偏慢时 error<0 → CC减小 → 加速）
 
 void MOTOR_PID(uint8_t motor_id)
 {
-    // LEFT.target_speed = WHEEL.target_speed;
-    // RIGHT.target_speed = WHEEL.target_speed;
-
     if (motor_id == 1)
     {
-        if (PWM_1_duty > 4000)
-            PWM_1_duty = 4000;
-        float error = LEFT.target_speed - LEFT.speed;
+        float error = LEFT.target_speed - LEFT.speed; // 反转误差方向
         LEFT.current_error = error;
-        PWM_1_duty += (uint16_t)(kp * (LEFT.current_error - LEFT.last_error) + ki * LEFT.current_error);     //增量的PI控制
+        int16_t pid_out = (int16_t)(kp * (LEFT.current_error - LEFT.last_error) + ki * LEFT.current_error);
+        int32_t new_duty = (int32_t)PWM_1_duty + pid_out; // 用有符号运算防溢出
+        if (new_duty < 0)
+            PWM_1_duty = 0;
+        else if (new_duty > 4000)
+            PWM_1_duty = 4000;
+        else
+            PWM_1_duty = (uint16_t)new_duty;
         LEFT.last_error = LEFT.current_error;
-        PWM_duty(PWM_1_duty,motor_id);
+        PWM_duty(PWM_1_duty, motor_id);
     }
     else if (motor_id == 2)
     {
-        if (PWM_2_duty > 4000)
-            PWM_2_duty = 4000;
         float error = RIGHT.target_speed - RIGHT.speed;
         RIGHT.current_error = error;
-        PWM_2_duty += (uint16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
+        int16_t pid_out = (int16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
+        int32_t new_duty = (int32_t)PWM_2_duty + pid_out;
+        if (new_duty < 0)
+            PWM_2_duty = 0;
+        else if (new_duty > 4000)
+            PWM_2_duty = 4000;
+        else
+            PWM_2_duty = (uint16_t)new_duty;
         RIGHT.last_error = RIGHT.current_error;
-        PWM_duty(PWM_2_duty,motor_id);
+        PWM_duty(PWM_2_duty, motor_id);
     }
 }
 
