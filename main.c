@@ -76,6 +76,7 @@ int main(void)
     direction(1, 1);                                    // 左轮正转
     direction(2, 1);                                    // 右轮正转
     DL_GPIO_setPins(TB6612_STBY_PORT, TB6612_STBY_PIN); // 使能驱动
+    motor_PWM(100, 100);                                // PID基准值，防止从0起步
     LEFT.target_speed = 500;
     RIGHT.target_speed = 500;
 

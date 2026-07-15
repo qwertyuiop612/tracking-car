@@ -65,14 +65,15 @@ void motor_PWM(int leftPWM,int rightPWM)
     }
     if(rightPWM > 0)  //右轮正转
     {
-        DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
-        DL_GPIO_clearPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
+        DL_GPIO_clearPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
+        DL_GPIO_setPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         PWM_2_duty = rightPWM;
         PWM_duty(rightPWM, 2); // 右轮 → C1 (PA13)
     }
     else if(rightPWM < 0)  //右轮反转
     {
-        DL_GPIO_clearPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
+        DL_GPIO_setPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
+        DL_GPIO_clearPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
         rightPWM = -rightPWM;
         PWM_2_duty = rightPWM;
@@ -111,17 +112,17 @@ void direction(uint8_t motor_id , uint8_t dir)
     {
         if(dir == 1)
         {
-            DL_GPIO_setPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
-            DL_GPIO_clearPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
+            DL_GPIO_clearPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
+            DL_GPIO_setPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         }
         else if(dir == 0)
         {
-            DL_GPIO_clearPins(TB6612_BIN1_PORT,TB6612_BIN1_PIN);
-            DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
+            DL_GPIO_setPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
+            DL_GPIO_clearPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         }
         else if(dir == 2)   //静止
         {
-            DL_GPIO_setPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
+            DL_GPIO_setPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
         }
     }
 }
