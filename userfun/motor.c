@@ -7,8 +7,8 @@
 
 extern uint32_t tmp_a;
 extern uint32_t tmp_b;
-uint16_t PWM_1_duty = 0;
-uint16_t PWM_2_duty = 0;
+volatile uint16_t PWM_1_duty = 0;
+volatile uint16_t PWM_2_duty = 0;
 
 struct WHEEL LEFT = {0.0f, 0.0f, 0.0f, 0.0f};
 struct WHEEL RIGHT = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -18,6 +18,15 @@ float kp = 2.0;
 float ki = 0.5;
 float kd = 0.1; 
 float integral = 0;
+
+// PID调试变量
+volatile float dbg_error1 = 0, dbg_last1 = 0;
+volatile int16_t dbg_pid_out1 = 0;
+volatile int32_t dbg_new_duty1 = 0;
+volatile uint16_t dbg_pwm1_after = 0;
+volatile float dbg_error2 = 0, dbg_last2 = 0;
+volatile int16_t dbg_pid_out2 = 0;
+volatile int32_t dbg_new_duty2 = 0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
 void MOTOR_Init(void)
@@ -74,7 +83,6 @@ void motor_PWM(int leftPWM,int rightPWM)
     {
         DL_GPIO_setPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
         DL_GPIO_clearPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
-        DL_GPIO_setPins(TB6612_BIN2_PORT,TB6612_BIN2_PIN);
         rightPWM = -rightPWM;
         PWM_2_duty = rightPWM;
         PWM_duty(rightPWM, 2); // 右轮 → C1 (PA13)
@@ -106,6 +114,7 @@ void direction(uint8_t motor_id , uint8_t dir)
         else if(dir == 2)   //静止
         {
             DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);
+            DL_GPIO_setPins(TB6612_AIN2_PORT, TB6612_AIN2_PIN);
         }
     }
     else if(motor_id == 2)  //右轮方向
@@ -123,6 +132,7 @@ void direction(uint8_t motor_id , uint8_t dir)
         else if(dir == 2)   //静止
         {
             DL_GPIO_setPins(TB6612_BIN1_PORT, TB6612_BIN1_PIN);
+            DL_GPIO_setPins(TB6612_BIN2_PORT, TB6612_BIN2_PIN);
         }
     }
 }
@@ -145,32 +155,61 @@ float cal_speed(uint8_t motor_id)
 }
 
 //------------------------------------------PID(仅使用PI速度环控制)---------------------------------------------------//
-// 注意: PWM 为 INIT_VAL_LOW 极性，CC值越大→占空比越小
-// 因此 error = 实际速度 - 目标速度（电机偏慢时 error<0 → CC减小 → 加速）
+// error = target - speed, new_duty = old_duty + pid_out
+// 当速度偏低时 error>0 → pid_out>0 → CC增大 → 占空比增大 → 加速
+// 当速度偏高时 error<0 → pid_out<0 → CC减小 → 占空比减小 → 减速
 
 void MOTOR_PID(uint8_t motor_id)
 {
     if (motor_id == 1)
     {
-        float error = LEFT.target_speed - LEFT.speed; // 反转误差方向
+        // 根据目标速度符号设置方向，PID 用绝对值计算
+        if (LEFT.target_speed > 0)
+            direction(1, 1); // 正转
+        else if (LEFT.target_speed < 0)
+            direction(1, 0); // 反转
+        else
+            direction(1, 2); // 静止
+
+        float target = LEFT.target_speed > 0 ? LEFT.target_speed : -LEFT.target_speed;
+        float error = target - LEFT.speed;
         LEFT.current_error = error;
         int16_t pid_out = (int16_t)(kp * (LEFT.current_error - LEFT.last_error) + ki * LEFT.current_error);
-        int32_t new_duty = (int32_t)PWM_1_duty + pid_out; // 用有符号运算防溢出
+        int32_t new_duty = (int32_t)PWM_1_duty + pid_out;
+        dbg_error1 = error;
+        dbg_last1 = LEFT.last_error;
+        dbg_pid_out1 = pid_out;
+        dbg_new_duty1 = new_duty;
         if (new_duty < 0)
             PWM_1_duty = 0;
         else if (new_duty > 4000)
             PWM_1_duty = 4000;
         else
             PWM_1_duty = (uint16_t)new_duty;
+        PWM_1_duty = 1234;           // 强制写固定值测试
+        dbg_pwm1_after = PWM_1_duty; // 立即读回验证
         LEFT.last_error = LEFT.current_error;
         PWM_duty(PWM_1_duty, motor_id);
     }
     else if (motor_id == 2)
     {
-        float error = RIGHT.target_speed - RIGHT.speed;
+        // 根据目标速度符号设置方向，PID 用绝对值计算
+        if (RIGHT.target_speed > 0)
+            direction(2, 1); // 正转
+        else if (RIGHT.target_speed < 0)
+            direction(2, 0); // 反转
+        else
+            direction(2, 2); // 静止
+
+        float target = RIGHT.target_speed > 0 ? RIGHT.target_speed : -RIGHT.target_speed;
+        float error = target - RIGHT.speed;
         RIGHT.current_error = error;
         int16_t pid_out = (int16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
         int32_t new_duty = (int32_t)PWM_2_duty + pid_out;
+        dbg_error2 = error;
+        dbg_last2 = RIGHT.last_error;
+        dbg_pid_out2 = pid_out;
+        dbg_new_duty2 = new_duty;
         if (new_duty < 0)
             PWM_2_duty = 0;
         else if (new_duty > 4000)
@@ -183,11 +222,15 @@ void MOTOR_PID(uint8_t motor_id)
 }
 
 //-------------------------------------中断函数(电机PID)计算------------------------------------------------//
+volatile uint32_t pid_isr_count = 0; // ISR进入次数
+volatile uint32_t pid_run_count = 0; // PID实际执行次数
 void MOTOR_PID_INST_IRQHandler(void)
 {
+    pid_isr_count++;
     switch (DL_Timer_getPendingInterrupt(MOTOR_PID_INST))
     {
         case DL_TIMER_IIDX_LOAD:
+            pid_run_count++;
             cal_speed(1);
             MOTOR_PID(1);
             cal_speed(2);

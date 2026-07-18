@@ -9,6 +9,9 @@
 #define OLED_CMD  0	//写命令
 #define OLED_DATA 1	//写数据
 
+//50*120
+
+
 typedef unsigned char u8;
 typedef unsigned int  u32;
 

@@ -62,10 +62,15 @@ int main(void)
 {
     //Init
     SYSCFG_DL_init();
-    DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
+    // DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
     GYRO_Init();
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
+    // sensor_detect();
+    /*OLED_Init();
+    OLED_ColorTurn(0);
+    OLED_DisplayTurn(0);
+    OLED_Clear();*/
 
     // NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
@@ -86,6 +91,18 @@ int main(void)
 
     while (1)
     {
+        // GYRO_GetData(&gyro_data);
+        track();
+        // OLED_ShowString(0, 0, "abcd", 16);
+        /*OLED_Refresh();
+        if (GYRO_GetData(&gyro_data))
+        {
+            sprintf(oled_str1, "deg = %.2f", gyro_data.angle_deg);
+            OLED_ShowString(0, 0, (u8 *)oled_str1, 16);
+            sprintf(oled_str2, "dps = %.2f", gyro_data.dps);
+            OLED_ShowString(0, 40, (u8 *)oled_str2, 16);
+            OLED_Refresh();
+        }*/
         // VOFA+ 调试输出
         if (++vofa_counter >= VOFA_INTERVAL)
         {

@@ -3,7 +3,7 @@
 #include "ti_msp_dl_config.h"
 
 int sensor[7] = {0,0,0,0,0,0,0};
-uint8_t idx;
+uint8_t idx = 0;
 float ALL_num = 0;
 
 //----------------------------------------------GPIO 状态读取-------------------------------------------//
@@ -39,28 +39,47 @@ float sensor_detect()
 float Difspeed(){
     switch (idx)
     {
-        case 2: //ALL_num = 1
-            return 400;
-            break;
-        case 3: //ALL_num = 2
-            return 250;
-            break;
-        case 4: //ALL_num = 3
-            return 100;
-            break;
-        case 5: //ALL_num = 4
-            return 0;
-            break;
-        case 6: //ALL_num = 5
-            return -100;
-            break;
-        case 7: //ALL_num = 6
-            return -250;
-            break;
-        case 8: //ALL_num = 7
-            return -400;
-            break;
-        default:
-            break;
+    case 2: // 1
+        return 600;
+        break;
+    case 3: // 1 + 2
+        return 500;
+        break;
+    case 4: // 2
+        return 400;
+        break;
+    case 5: // 2 + 3
+        return 300;
+        break;
+    case 6: // 3
+        return 200;
+        break;
+    case 7: // 3 + 4
+        return 100;
+        break;
+    case 8: // 4
+        return 0;
+        break;
+    case 9: // 4 + 5
+        return -100;
+        break;
+    case 10: // 5
+        return -200;
+        break;
+    case 11: // 5 + 6
+        return -300;
+        break;
+    case 12: // 6
+        return -400;
+        break;
+    case 13: // 6 + 7
+        return -500;
+        break;
+    case 14: // 7
+        return -600;
+        break;
+    default:
+        return 0;
+        break;
     }
 }
