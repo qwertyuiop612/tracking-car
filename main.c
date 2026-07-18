@@ -60,6 +60,9 @@ void SysTick_Handler(void)
 
 int main(void)
 {
+    // 启动延迟，等待外部晶振稳定（调试器 halt 期间已稳定，独立上电需要）
+    delay_cycles(8000000); // 约 100~250ms
+
     //Init
     SYSCFG_DL_init();
     // DL_ADC12_enableConversions(ADC12_0_INST);   //adc初始化
@@ -67,10 +70,10 @@ int main(void)
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
     // sensor_detect();
-    /*OLED_Init();
+    OLED_Init();
     OLED_ColorTurn(0);
     OLED_DisplayTurn(0);
-    OLED_Clear();*/
+    OLED_Clear();
 
     // NVIC
     NVIC_EnableIRQ(TB6612_GPIOA_INT_IRQN);
@@ -91,11 +94,11 @@ int main(void)
 
     while (1)
     {
-        // GYRO_GetData(&gyro_data);
         track();
-        // OLED_ShowString(0, 0, "abcd", 16);
-        /*OLED_Refresh();
-        if (GYRO_GetData(&gyro_data))
+        sprintf(oled_str1, "L:%.1f R:%.1f", LEFT.speed, RIGHT.speed);
+        OLED_ShowString(0, 0, (u8 *)oled_str1, 16);
+        OLED_Refresh();
+        /*if (GYRO_GetData(&gyro_data))
         {
             sprintf(oled_str1, "deg = %.2f", gyro_data.angle_deg);
             OLED_ShowString(0, 0, (u8 *)oled_str1, 16);

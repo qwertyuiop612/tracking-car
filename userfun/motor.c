@@ -25,8 +25,8 @@ void MOTOR_Init(void)
     DL_Timer_startCounter(PWM_0_INST);
     DL_GPIO_setPins(TB6612_AIN1_PORT,TB6612_AIN1_PIN);  //设置电机方向为静止
     DL_GPIO_setPins(TB6612_AIN2_PORT,TB6612_AIN2_PIN);
-    DL_Timer_setCaptureCompareValue(PWM_0_INST,0,GPIO_PWM_0_C0_IDX);
-    DL_Timer_setCaptureCompareValue(PWM_0_INST,0,GPIO_PWM_0_C1_IDX);
+    DL_Timer_setCaptureCompareValue(PWM_0_INST, 100, GPIO_PWM_0_C0_IDX);
+    DL_Timer_setCaptureCompareValue(PWM_0_INST, 100, GPIO_PWM_0_C1_IDX);
     NVIC_EnableIRQ(MOTOR_PID_INST_INT_IRQN); // NVIC使能，定时器在main中启动
 }
 
