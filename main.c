@@ -50,7 +50,7 @@ char oled_str1[50];
 char oled_str2[50];
 
 // VOFA+ 调试用（用简单计数器，不依赖SysTick）
-static uint32_t vofa_counter = 0;
+// static uint32_t vofa_counter = 0;
 #define VOFA_INTERVAL 20000 // 主循环每20k次发一帧
 
 void SysTick_Handler(void)
@@ -69,7 +69,6 @@ int main(void)
     GYRO_Init();
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
-    // sensor_detect();
     OLED_Init();
     OLED_ColorTurn(0);
     OLED_DisplayTurn(0);
@@ -95,24 +94,29 @@ int main(void)
     while (1)
     {
         track();
-        sprintf(oled_str1, "L:%.1f R:%.1f", LEFT.speed, RIGHT.speed);
+        /*sprintf(oled_str1, "L:%.1f R:%.1f", LEFT.speed, RIGHT.speed);
         OLED_ShowString(0, 0, (u8 *)oled_str1, 16);
-        OLED_Refresh();
-        /*if (GYRO_GetData(&gyro_data))
+        OLED_Refresh();*/
+        if (GYRO_GetData(&gyro_data))
         {
             sprintf(oled_str1, "deg = %.2f", gyro_data.angle_deg);
             OLED_ShowString(0, 0, (u8 *)oled_str1, 16);
             sprintf(oled_str2, "dps = %.2f", gyro_data.dps);
             OLED_ShowString(0, 40, (u8 *)oled_str2, 16);
             OLED_Refresh();
-        }*/
+        }
+        else
+        {
+            OLED_ShowString(0, 0, (u8 *)"error", 16);
+            OLED_Refresh();
+        }
         // VOFA+ 调试输出
-        if (++vofa_counter >= VOFA_INTERVAL)
+        /*if (++vofa_counter >= VOFA_INTERVAL)
         {
             vofa_counter = 0;
             uart_printf("%.1f,%.1f,%d,%.1f,%.1f,%d\n",
                         LEFT.target_speed, LEFT.speed, PWM_1_duty,
                         RIGHT.target_speed, RIGHT.speed, PWM_2_duty);
-        }
+        }*/
     }
 }

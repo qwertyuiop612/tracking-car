@@ -40,43 +40,43 @@ float Difspeed(){
     switch (idx)
     {
     case 2: // 1
-        return 600;
-        break;
-    case 3: // 1 + 2
-        return 500;
-        break;
-    case 4: // 2
-        return 400;
-        break;
-    case 5: // 2 + 3
-        return 300;
-        break;
-    case 6: // 3
         return 200;
         break;
+    case 3: // 1 + 2
+        return 150;
+        break;
+    case 4: // 2
+        return 120;
+        break;
+    case 5: // 2 + 3
+        return 70;
+        break;
+    case 6: // 3
+        return 50;
+        break;
     case 7: // 3 + 4
-        return 100;
+        return 20;
         break;
     case 8: // 4
         return 0;
         break;
     case 9: // 4 + 5
-        return -100;
+        return -20;
         break;
     case 10: // 5
-        return -200;
+        return -50;
         break;
     case 11: // 5 + 6
-        return -300;
+        return -70;
         break;
     case 12: // 6
-        return -400;
+        return -120;
         break;
     case 13: // 6 + 7
-        return -500;
+        return -150;
         break;
     case 14: // 7
-        return -600;
+        return -200;
         break;
     default:
         return 0;
