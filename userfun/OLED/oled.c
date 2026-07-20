@@ -30,25 +30,47 @@ void OLED_DisplayTurn(u8 i)
 void OLED_WR_Byte(uint8_t dat, uint8_t mode)
 {
     uint8_t txData[2];
-    
-    // 控制字节: 0x00为命令, 0x40为数据
-    txData[0] = mode ? 0x40 : 0x00; 
-    txData[1] = dat;
+	volatile uint32_t timeout;
 
-    // 1. 等待 I2C 彻底空闲
-    while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_IDLE));
-    
-    // 2. 将 2 个字节填入发送 FIFO
+	// 控制字节: 0x00为命令, 0x40为数据
+	txData[0] = mode ? 0x40 : 0x00;
+	txData[1] = dat;
+
+	// 1. 等待 I2C 彻底空闲（带超时，防止总线挂死导致死循环）
+	timeout = 100000;
+	while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_IDLE))
+	{
+		if (--timeout == 0)
+		{
+			DL_I2C_resetControllerTransfer(OLED_INST);
+			return;
+		}
+	}
+
+	// 2. 将 2 个字节填入发送 FIFO
     DL_I2C_fillControllerTXFIFO(OLED_INST, txData, 2);
-    
-    // 3. 启动传输
+
+	// 3. 启动传输
     DL_I2C_startControllerTransfer(OLED_INST, 0x3C, DL_I2C_CONTROLLER_DIRECTION_TX, 2);
-    
-    // 4. 等待总线变为 BUSY 状态 (确保硬件状态机已经启动，比 delay 更可靠)
-    while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_BUSY_BUS));
-    
-    // 5. 再次等待 I2C 回到空闲状态 (代表本次传输真正完成)
-    while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_IDLE));
+
+	// 4. 等待总线变为 BUSY 状态
+	timeout = 100000;
+	while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_BUSY_BUS))
+	{
+		if (--timeout == 0)
+			return;
+	}
+
+	// 5. 等待 I2C 回到空闲状态（代表本次传输真正完成）
+	timeout = 100000;
+	while (!(DL_I2C_getControllerStatus(OLED_INST) & DL_I2C_CONTROLLER_STATUS_IDLE))
+	{
+		if (--timeout == 0)
+		{
+			DL_I2C_resetControllerTransfer(OLED_INST);
+			return;
+		}
+	}
 }
 
 //开启OLED显示 

@@ -4,7 +4,8 @@
 
 int sensor[7] = {0,0,0,0,0,0,0};
 uint8_t idx = 0;
-float ALL_num = 0;
+float trace = 0;
+float last_trace = 0;
 
 //----------------------------------------------GPIO 状态读取-------------------------------------------//
 uint8_t get_gpio_state(GPIO_Regs *gpio_port,uint32_t gpio)
@@ -27,59 +28,15 @@ float sensor_detect()
     if (get_gpio_state(SENSOR_GRP_SNESOR_5_PORT,SENSOR_GRP_SNESOR_5_PIN)) {sensor[5] = 6 ; i++;} else sensor[5] = 0;
     if (get_gpio_state(SENSOR_GRP_SNESOR_6_PORT,SENSOR_GRP_SNESOR_6_PIN)) {sensor[6] = 7 ; i++;} else sensor[6] = 0;
     sum = sensor[0] + sensor[1] + sensor[2] + sensor[3] + sensor[4] + sensor[5] + sensor[6];
-    if (i == 0) ALL_num = 0;
+    if (i == 0)
+        trace = 0;
     else
-        ALL_num = (float)sum / i;
-    idx = (ALL_num * 2 + 0.5);
-    return ALL_num;
+        trace = (float)sum / i;
+    if (trace != 0)
+        last_trace = trace;
+    else if (trace == 0)
+        trace = last_trace;
+    idx = (trace * 2 + 0.5);
+    return trace;
 }
 //------------------------------------------从0到6分别为从左到右---------------------------------------//
-
-//-------------------------------------------速度对应表-----------------------------------------------//
-float Difspeed(){
-    switch (idx)
-    {
-    case 2: // 1
-        return 200;
-        break;
-    case 3: // 1 + 2
-        return 150;
-        break;
-    case 4: // 2
-        return 120;
-        break;
-    case 5: // 2 + 3
-        return 70;
-        break;
-    case 6: // 3
-        return 50;
-        break;
-    case 7: // 3 + 4
-        return 20;
-        break;
-    case 8: // 4
-        return 0;
-        break;
-    case 9: // 4 + 5
-        return -20;
-        break;
-    case 10: // 5
-        return -50;
-        break;
-    case 11: // 5 + 6
-        return -70;
-        break;
-    case 12: // 6
-        return -120;
-        break;
-    case 13: // 6 + 7
-        return -150;
-        break;
-    case 14: // 7
-        return -200;
-        break;
-    default:
-        return 0;
-        break;
-    }
-}
