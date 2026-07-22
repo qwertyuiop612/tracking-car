@@ -14,9 +14,9 @@ struct WHEEL LEFT = {0.0f, 0.0f, 0.0f, 0.0f};
 struct WHEEL RIGHT = {0.0f, 0.0f, 0.0f, 0.0f};
 struct WHEEL WHEEL = {0.0f, 0.0f, 0.0f, 0.0f};
 
-float kp = 2.0;
-float ki = 0.5;
-float kd = 0.1; 
+float v_kp = 2.0;
+float v_ki = 0.5;
+float v_kd = 0.1;
 float integral = 0;
 
 //---------------------------------------------电机初始化设置为静止--------------------------------------------//
@@ -166,7 +166,7 @@ void MOTOR_PID(uint8_t motor_id)
         float target = LEFT.target_speed > 0 ? LEFT.target_speed : -LEFT.target_speed;
         float error = target - LEFT.speed;
         LEFT.current_error = error;
-        int16_t pid_out = (int16_t)(kp * (LEFT.current_error - LEFT.last_error) + ki * LEFT.current_error);
+        int16_t pid_out = (int16_t)(v_kp * (LEFT.current_error - LEFT.last_error) + v_ki * LEFT.current_error);
         int32_t new_duty = (int32_t)PWM_1_duty + pid_out;
         if (new_duty <= 0)
             PWM_1_duty = 0;
@@ -190,7 +190,7 @@ void MOTOR_PID(uint8_t motor_id)
         float target = RIGHT.target_speed > 0 ? RIGHT.target_speed : -RIGHT.target_speed;
         float error = target - RIGHT.speed;
         RIGHT.current_error = error;
-        int16_t pid_out = (int16_t)(kp * (RIGHT.current_error - RIGHT.last_error) + ki * RIGHT.current_error);
+        int16_t pid_out = (int16_t)(v_kp * (RIGHT.current_error - RIGHT.last_error) + v_ki * RIGHT.current_error);
         int32_t new_duty = (int32_t)PWM_2_duty + pid_out;
         if (new_duty <= 0)
             PWM_2_duty = 0;
@@ -209,6 +209,7 @@ void MOTOR_PID_INST_IRQHandler(void)
     switch (DL_Timer_getPendingInterrupt(MOTOR_PID_INST))
     {
     case DL_TIMER_IIDX_LOAD:
+        track(); // 位置 PID，与速度 PID 同频 100Hz
         cal_speed(1);
         MOTOR_PID(1);
         cal_speed(2);
