@@ -121,6 +121,8 @@ void OLED_Clear(void)
 void OLED_DrawPoint(u8 x,u8 y)
 {
 	u8 i,m,n;
+	if (x >= 144 || y >= 64)
+		return;
 	i=y/8;
 	m=y%8;
 	n=1<<m;
@@ -131,6 +133,8 @@ void OLED_DrawPoint(u8 x,u8 y)
 void OLED_ClearPoint(u8 x,u8 y)
 {
 	u8 i,m,n;
+	if (x >= 144 || y >= 64)
+		return;
 	i=y/8;
 	m=y%8;
 	n=1<<m;

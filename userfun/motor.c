@@ -4,6 +4,7 @@
 #include "track.h"
 #include "interrupt.h"
 #include "motor.h"
+#include "gyro.h"
 
 extern uint32_t tmp_a;
 extern uint32_t tmp_b;
@@ -209,12 +210,20 @@ void MOTOR_PID_INST_IRQHandler(void)
     switch (DL_Timer_getPendingInterrupt(MOTOR_PID_INST))
     {
     case DL_TIMER_IIDX_LOAD:
-        track(); // 位置 PID，与速度 PID 同频 100Hz
+    {
+        static uint8_t pos_div = 0;
+        // 位置环降频到 20Hz（每5次中断执行一次），速度环保持 100Hz
+        if (++pos_div >= 2)
+        {
+            pos_div = 0;
+            GYRO_StateMachine();
+        }
         cal_speed(1);
         MOTOR_PID(1);
         cal_speed(2);
         MOTOR_PID(2);
         break;
+    }
     default:
         break;
     }

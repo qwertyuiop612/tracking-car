@@ -13,6 +13,10 @@
 #define GYRO_ANGLE_SCALE 9.77f // raw / 9.77 = 度
 #define GYRO_DPS_SCALE 100.0f  // raw / 100  = 度/秒
 
+// 运行模式
+#define MODE_ANGLE_TUNE 0 // AI 辅助调整角度 PID
+#define MODE_TRACK 1      // 循迹模式
+
 typedef struct {
     int16_t angle_raw;
     int16_t dps_raw;
@@ -20,12 +24,30 @@ typedef struct {
     float dps;
 } GyroData_t;
 
+// ----- 角度 PID 参数（可通过 UART SET 命令调整）-----
+extern float a_kp;
+extern float a_ki;
+extern float a_kd;
+
+// 角度目标值（可通过 UART "angle.target=x" 设置）
+extern float angle_target;
+
+// LLM-PID-Tuner 上报开关
+extern volatile uint8_t tuner_report_enable;
+
 extern volatile uint8_t gyro_rx_done;
 extern volatile int16_t gyro_angle_raw;
 extern volatile int16_t gyro_dps_raw;
 
 void GYRO_Init(void);
-void GYRO_SendQuery(void); // 发送 Modbus 查询命令（可选，模块自动发送时不需要）
+void GYRO_SendQuery(void);
 int GYRO_GetData(GyroData_t *data);
+
+// 状态机：在 PID 定时器 ISR 中调用，替代原 track() 的位置
+void GYRO_StateMachine(void);
+
+// 设置运行模式（供 UART 命令 mode:x 调用）
+void GYRO_SetMode(int new_mode);
+int GYRO_GetMode(void);
 
 #endif

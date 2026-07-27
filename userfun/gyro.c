@@ -1,4 +1,11 @@
 #include "gyro.h"
+#include "motor.h"
+#include "track.h"
+#include "uart.h"
+
+extern volatile uint32_t sys_tick_ms;
+extern float p_last_err;
+extern float p_err_sum;
 
 volatile uint8_t  gyro_rx_done   = 0;
 volatile int16_t  gyro_angle_raw = 0;
@@ -130,11 +137,18 @@ void GYRO_Init(void)
 }
 
 //------------------------------角度归一化 ±180°---------------------------//
-static float WrapAngle180(float angle)
+// M0+ 无硬件 FPU，用整数运算归一化更可靠
+// GYRO_ANGLE_SCALE = 9.77, 180° ≈ 1759 raw, 360° ≈ 3517 raw
+#define RAW_HALF_CIRCLE 1759
+#define RAW_FULL_CIRCLE 3517
+
+static int16_t WrapRaw180(int16_t raw)
 {
-    while (angle >=  180.0f) angle -= 360.0f;
-    while (angle <  -180.0f) angle += 360.0f;
-    return angle;
+    while (raw > RAW_HALF_CIRCLE)
+        raw -= RAW_FULL_CIRCLE;
+    while (raw < -RAW_HALF_CIRCLE)
+        raw += RAW_FULL_CIRCLE;
+    return raw;
 }
 
 //-----------------------------获取解析后的数据----------------------------//
@@ -147,11 +161,129 @@ int GYRO_GetData(GyroData_t *data)
     data->angle_raw = gyro_angle_raw;
     data->dps_raw   = gyro_dps_raw;
     gyro_rx_done = 0; // 先清标志再开中断，避免竞态
+
+    // 转换为浮点值（M0+ 无硬件 FPU，必须在关中断下完成，防止 PID ISR 重入破坏 FP 上下文）
+    data->angle_deg = (float)WrapRaw180(data->angle_raw) / GYRO_ANGLE_SCALE;
+    data->dps       = data->dps_raw / GYRO_DPS_SCALE;
     __enable_irq();
 
-    // 转换为浮点值
-    data->angle_deg = WrapAngle180(data->angle_raw / GYRO_ANGLE_SCALE);
-    data->dps       = data->dps_raw / GYRO_DPS_SCALE;
-
     return 1;
+}
+
+//------------------------------角度 PID ---------------------------------//
+// 参数可通过 UART "SET P:x I:y D:z" 命令调整
+float a_kp = 0.0f;
+float a_ki = 0.0f;
+float a_kd = 0.0f;
+float angle_target = 0.0f; // 目标角度，通过 UART "angle.target=x" 设置
+
+static float a_err = 0.0f;
+static float a_last_err = 0.0f;
+static float a_err_sum = 0.0f;
+
+// 积分限幅
+static void A_IntegralLimit(float limit)
+{
+    if (a_err_sum > limit)
+        a_err_sum = limit;
+    if (a_err_sum < -limit)
+        a_err_sum = -limit;
+}
+
+// 角度 PID 计算，返回转向量（正值=右转，负值=左转）
+static float AnglePID(float target_angle, float current_angle)
+{
+    a_err = target_angle - current_angle;
+
+    // 积分分离：大误差时清积分，防过冲
+    if (a_err > 20.0f || a_err < -20.0f)
+        a_err_sum = 0.0f;
+    else
+        a_err_sum += a_err;
+
+    A_IntegralLimit(100.0f);
+
+    float diff = a_err - a_last_err;
+    a_last_err = a_err;
+
+    return a_kp * a_err + a_ki * a_err_sum + a_kd * diff;
+}
+
+//------------------------------运行模式管理-----------------------------//
+static volatile int g_mode = MODE_ANGLE_TUNE;
+
+void GYRO_SetMode(int new_mode)
+{
+    if (new_mode == MODE_ANGLE_TUNE || new_mode == MODE_TRACK)
+    {
+        g_mode = new_mode;
+        // 切换模式时清零 PID 历史，防突变
+        a_err = 0.0f;
+        a_last_err = 0.0f;
+        a_err_sum = 0.0f;
+        p_last_err = 0.0f;
+        p_err_sum = 0.0f;
+
+        // 模式 0：停车
+        if (new_mode == MODE_ANGLE_TUNE)
+        {
+            LEFT.target_speed = 0.0f;
+            RIGHT.target_speed = 0.0f;
+        }
+    }
+}
+
+int GYRO_GetMode(void)
+{
+    return g_mode;
+}
+
+//------------------------------状态机（在 PID 定时器 ISR 中调用）-------//
+// 替代原 track() 的位置调用：motor.c MOTOR_PID_INST_IRQHandler → 位置环 → 这里
+#define ANGLE_TUNE_REPORT_DIV 5 // 上报分频（50Hz 位置环 → 10Hz 上报）
+
+void GYRO_StateMachine(void)
+{
+    static GyroData_t data;
+    static uint8_t report_cnt = 0;
+
+    if (g_mode == MODE_ANGLE_TUNE)
+    {
+        // ---- 模式 0：原地角度 PID 调参（速度=0，仅转向）----
+        if (GYRO_GetData(&data))
+        {
+            float turn = AnglePID(angle_target, data.angle_deg);
+
+            // 限幅
+            if (turn > 400.0f)
+                turn = 400.0f;
+            if (turn < -400.0f)
+                turn = -400.0f;
+
+            // 速度=0，差速原地转向：左轮 -turn，右轮 +turn
+            LEFT.target_speed = -turn;
+            RIGHT.target_speed = turn;
+
+            // CSV 上报
+            if (tuner_report_enable)
+            {
+                if (++report_cnt >= ANGLE_TUNE_REPORT_DIV)
+                {
+                    report_cnt = 0;
+                    uart_printf("%lu,%.1f,%.2f,%.1f,%.2f,%.2f,%.2f,%.2f\r\n",
+                                sys_tick_ms,
+                                angle_target,                  // setpoint
+                                data.angle_deg,                // input
+                                turn,                          // pwm
+                                angle_target - data.angle_deg, // error
+                                a_kp, a_ki, a_kd);
+                }
+            }
+        }
+    }
+    else // MODE_TRACK
+    {
+        // ---- 模式 1：循迹（原 track.c 逻辑）----
+        track();
+    }
 }
