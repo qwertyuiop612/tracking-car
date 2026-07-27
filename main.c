@@ -61,7 +61,7 @@ void SysTick_Handler(void)
 int main(void)
 {
     SYSCFG_DL_init();
-    GYRO_Init();
+    GYRO_Init();                                // 陀螺仪初始化
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
     OLED_Init();
@@ -78,9 +78,9 @@ int main(void)
     direction(1, 1);                                    // 左轮正转
     direction(2, 1);                                    // 右轮正转
     DL_GPIO_setPins(TB6612_STBY_PORT, TB6612_STBY_PIN); // 使能驱动
-    motor_PWM(100, 100);                                // PID基准值，防止从0起步
-    LEFT.target_speed = 500;
-    RIGHT.target_speed = 500;
+    /*motor_PWM(100, 100);                                // PID基准值，防止从0起步
+    LEFT.target_speed = 400;
+    RIGHT.target_speed = 400;*/
 
     // 所有配置就绪后，启动PID定时器
     DL_Timer_startCounter(MOTOR_PID_INST);
@@ -88,5 +88,12 @@ int main(void)
 
     while (1)
     {
+        // 同步物理按键状态到运行模式（按键切换 0/1/2，取模到 0/1）
+        static int last_status = -1;
+        if (status != last_status)
+        {
+            last_status = status;
+            GYRO_SetMode(status % 2);
+        }
     }
 }

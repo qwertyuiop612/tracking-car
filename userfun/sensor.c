@@ -5,7 +5,9 @@
 int sensor[7] = {0,0,0,0,0,0,0};
 uint8_t idx = 0;
 float trace = 0;
+float raw_trace = 0; // 原始传感器读数（未经 last_trace 覆盖），供 LLM 上报
 float last_trace = 0;
+float trace_filtered = 4.0f; // EMA滤波后的trace，初始为中心值
 
 //----------------------------------------------GPIO 状态读取-------------------------------------------//
 uint8_t get_gpio_state(GPIO_Regs *gpio_port,uint32_t gpio)
@@ -32,11 +34,24 @@ float sensor_detect()
         trace = 0;
     else
         trace = (float)sum / i;
+
+    // 控制回路：last_trace 保持原值（温和平滑）
+    // LLM 上报：raw_trace 做方向推断，保证左右对称偏差±4
     if (trace != 0)
+    {
         last_trace = trace;
-    else if (trace == 0)
-        trace = last_trace;
+        raw_trace = trace;
+    }
+    else
+    {
+        trace = last_trace;                            // 控制用原值
+        raw_trace = (last_trace > 4.0f) ? 8.0f : 0.0f; // LLM 看到对称值
+    }
+
+    // EMA低通滤波，α=0.35
+    trace_filtered = trace_filtered * 0.65f + trace * 0.35f;
+
     idx = (trace * 2 + 0.5);
-    return trace;
+    return trace_filtered;
 }
 //------------------------------------------从0到6分别为从左到右---------------------------------------//
