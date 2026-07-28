@@ -136,19 +136,30 @@ void GYRO_Init(void)
     NVIC_EnableIRQ(GYRO_INST_INT_IRQN);
 }
 
-//------------------------------角度归一化 ±180°---------------------------//
+//------------------------------角度归一化 0~360°---------------------------//
 // M0+ 无硬件 FPU，用整数运算归一化更可靠
 // GYRO_ANGLE_SCALE = 9.77, 180° ≈ 1759 raw, 360° ≈ 3517 raw
 #define RAW_HALF_CIRCLE 1759
 #define RAW_FULL_CIRCLE 3517
 
-static int16_t WrapRaw180(int16_t raw)
+static int16_t WrapRaw360(int16_t raw)
 {
-    while (raw > RAW_HALF_CIRCLE)
+    while (raw >= RAW_FULL_CIRCLE)
         raw -= RAW_FULL_CIRCLE;
-    while (raw < -RAW_HALF_CIRCLE)
+    while (raw < 0)
         raw += RAW_FULL_CIRCLE;
     return raw;
+}
+
+// 整数最短路径差：返回 t - c，范围 (-half, half]
+static int16_t RawShortestDiff(int16_t t, int16_t c)
+{
+    int16_t d = t - c;
+    while (d > RAW_HALF_CIRCLE)
+        d -= RAW_FULL_CIRCLE;
+    while (d < -RAW_HALF_CIRCLE)
+        d += RAW_FULL_CIRCLE;
+    return d;
 }
 
 //-----------------------------获取解析后的数据----------------------------//
@@ -163,7 +174,7 @@ int GYRO_GetData(GyroData_t *data)
     gyro_rx_done = 0; // 先清标志再开中断，避免竞态
 
     // 转换为浮点值（M0+ 无硬件 FPU，必须在关中断下完成，防止 PID ISR 重入破坏 FP 上下文）
-    data->angle_deg = (float)WrapRaw180(data->angle_raw) / GYRO_ANGLE_SCALE;
+    data->angle_deg = (float)WrapRaw360(data->angle_raw) / GYRO_ANGLE_SCALE;
     data->dps       = data->dps_raw / GYRO_DPS_SCALE;
     __enable_irq();
 
@@ -172,9 +183,9 @@ int GYRO_GetData(GyroData_t *data)
 
 //------------------------------角度 PID ---------------------------------//
 // 参数可通过 UART "SET P:x I:y D:z" 命令调整
-float a_kp = 0.0f;
-float a_ki = 0.0f;
-float a_kd = 0.0f;
+float a_kp = 3.0f;
+float a_ki = 0.01f;
+float a_kd = 18.0f;
 float angle_target = 0.0f; // 目标角度，通过 UART "angle.target=x" 设置
 
 static float a_err = 0.0f;
@@ -190,20 +201,29 @@ static void A_IntegralLimit(float limit)
         a_err_sum = -limit;
 }
 
-// 角度 PID 计算，返回转向量（正值=右转，负值=左转）
-static float AnglePID(float target_angle, float current_angle)
+// 角度 PID（M0+ 可靠版：所有角度差用整数计算，避免浮点比较失败）
+// 返回转向量，正值=角度增大方向
+static float AnglePID(float target_deg, float current_deg)
 {
-    a_err = target_angle - current_angle;
+    // 转为 raw 整数做可靠比较
+    int16_t t_raw = (int16_t)(target_deg * GYRO_ANGLE_SCALE + 0.5f);
+    int16_t c_raw = (int16_t)(current_deg * GYRO_ANGLE_SCALE + 0.5f);
 
-    // 积分分离：大误差时清积分，防过冲
-    if (a_err > 20.0f || a_err < -20.0f)
+    // 整数最短路径误差
+    int16_t err_raw = RawShortestDiff(t_raw, c_raw);
+    a_err = (float)err_raw / GYRO_ANGLE_SCALE;
+
+    // 整数积分分离（90° = 879 raw）
+    if (err_raw > 879 || err_raw < -879)
         a_err_sum = 0.0f;
     else
         a_err_sum += a_err;
-
     A_IntegralLimit(100.0f);
 
-    float diff = a_err - a_last_err;
+    // D 项：整数差分，避免 +179↔-179 跨越导致浮点 D 爆表
+    int16_t last_raw = (int16_t)(a_last_err * GYRO_ANGLE_SCALE + 0.5f);
+    int16_t diff_raw = RawShortestDiff(err_raw, last_raw);
+    float diff = (float)diff_raw / GYRO_ANGLE_SCALE;
     a_last_err = a_err;
 
     return a_kp * a_err + a_ki * a_err_sum + a_kd * diff;
@@ -260,9 +280,9 @@ void GYRO_StateMachine(void)
             if (turn < -400.0f)
                 turn = -400.0f;
 
-            // 速度=0，差速原地转向：左轮 -turn，右轮 +turn
-            LEFT.target_speed = -turn;
-            RIGHT.target_speed = turn;
+            // 差速原地转向（角度增大方向 = turn 正值方向）
+            LEFT.target_speed = turn;
+            RIGHT.target_speed = -turn;
 
             // CSV 上报
             if (tuner_report_enable)
@@ -270,12 +290,17 @@ void GYRO_StateMachine(void)
                 if (++report_cnt >= ANGLE_TUNE_REPORT_DIV)
                 {
                     report_cnt = 0;
+                    // 整数最短路径误差（M0+ 浮点比较不可靠）
+                    int16_t t_raw = (int16_t)(angle_target * GYRO_ANGLE_SCALE + 0.5f);
+                    int16_t c_raw = (int16_t)(data.angle_deg * GYRO_ANGLE_SCALE + 0.5f);
+                    float csv_err = (float)RawShortestDiff(t_raw, c_raw) / GYRO_ANGLE_SCALE;
+
                     uart_printf("%lu,%.1f,%.2f,%.1f,%.2f,%.2f,%.2f,%.2f\r\n",
                                 sys_tick_ms,
-                                angle_target,                  // setpoint
-                                data.angle_deg,                // input
-                                turn,                          // pwm
-                                angle_target - data.angle_deg, // error
+                                angle_target,   // setpoint
+                                data.angle_deg, // input
+                                turn,           // pwm
+                                csv_err,        // error
                                 a_kp, a_ki, a_kd);
                 }
             }

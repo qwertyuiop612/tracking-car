@@ -68,10 +68,12 @@ void track()
     static int8_t pivot_dir = 0;    // 0=无, 1=左转, -1=右转
     static uint8_t cooldown = 0;    // 退出后冷却计数
     static uint8_t just_exited = 0; // 刚退出 pivot，首帧跳过 EMA
+    static uint8_t pend_cnt = 0;    // 持续判定计数
+    static int8_t pend_dir = 0;     // 待判定方向
 
     if (cooldown > 0)
     {
-        cooldown--; // 冷却中，不触发也不退出
+        cooldown--;
     }
     else if (pivot_dir != 0)
     {
@@ -79,18 +81,49 @@ void track()
         {
             pivot_dir = 0;
             cooldown = PIVOT_COOLDOWN;
-            just_exited = 1; // 首帧直接赋值，不走 EMA
-            p_last_err = 0;  // 清 D 历史，防暴冲
-            p_err_sum = 0;   // 清 I 积累
+            just_exited = 1;
+            p_last_err = 0;
+            p_err_sum = 0;
         }
     }
     else if (left_far && right_side == 0)
     {
-        pivot_dir = 1; // 左直角
+        if (pend_dir == 1)
+        {
+            if (++pend_cnt >= 2)
+            {
+                pivot_dir = 1;
+                pend_cnt = 0;
+                pend_dir = 0;
+            }
+        }
+        else
+        {
+            pend_dir = 1;
+            pend_cnt = 1;
+        }
     }
     else if (right_far && left_side == 0)
     {
-        pivot_dir = -1; // 右直角
+        if (pend_dir == -1)
+        {
+            if (++pend_cnt >= 2)
+            {
+                pivot_dir = -1;
+                pend_cnt = 0;
+                pend_dir = 0;
+            }
+        }
+        else
+        {
+            pend_dir = -1;
+            pend_cnt = 1;
+        }
+    }
+    else
+    {
+        pend_cnt = 0; // 条件不满足，重置判定
+        pend_dir = 0;
     }
 
     float turn;

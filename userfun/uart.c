@@ -111,8 +111,9 @@ void UART_0_INST_IRQHandler()
 					else if (s[0] == 'a' && s[1] == 'n' && s[2] == 'g' && s[3] == 'l' &&
 							 s[4] == 'e' && s[5] == '.' && s[6] == 't')
 					{
+						// s+13 跳过 "angle.target=" 全部 13 字符
 						float val;
-						s = parse_float(s + 7, &val);
+						parse_float(s + 13, &val);
 						angle_target = val;
 					}
 					// ---- 命令：SET P:x I:y D:z（根据当前模式设置对应 PID）----
