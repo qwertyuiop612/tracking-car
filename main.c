@@ -38,13 +38,12 @@
 #include "motor.h"
 #include "oled.h"
 #include "servo.h"
-#include "mpu_port.h"
 #include "gyro.h"
 #include "uart.h"
 #include "stdio.h"
 
 volatile int status = 0;
-extern volatile uint32_t sys_tick_ms;
+volatile uint32_t sys_tick_ms = 0;
 GyroData_t gyro_data;
 char oled_str1[50];
 char oled_str2[50];
