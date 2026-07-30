@@ -32,23 +32,24 @@
 
 #include "ti_msp_dl_config.h"
 #include "default.h"
-#include "sensor.h"
-#include "track.h"
 #include "interrupt.h"
-#include "motor.h"
-#include "display.h"
-#include "servo.h"
-#include "gyro.h"
+#include "oled.h"
 #include "uart.h"
-#include "mgnt.h"
+#include "stepper.h"
 #include "stdio.h"
 
 volatile int status = 0;
 volatile uint32_t sys_tick_ms = 0;
 
-/*// VOFA+ 调试用（用简单计数器，不依赖SysTick）
-static uint32_t vofa_counter = 0;
-#define VOFA_INTERVAL 20000 // 主循环每20k次发一帧*/
+// 运行模式
+#define MODE_ANGLE_TUNE 0
+#define MODE_TRACK 1
+static volatile int g_mode = MODE_ANGLE_TUNE;
+
+// 计时相关（由 uart.c 的 @M 处理更新）
+volatile uint32_t track_start_ms = 0;
+volatile uint32_t track_stop_ms = 0;
+volatile uint8_t marker_stopped = 0;
 
 void SysTick_Handler(void)
 {
@@ -58,35 +59,34 @@ void SysTick_Handler(void)
 int main(void)
 {
     SYSCFG_DL_init();
-    MGNT_Init();                                // 电磁铁初始化
-    GYRO_Init();                                // 陀螺仪初始化
-    SERVO_Init();                               // 舵机初始化
-    MOTOR_Init();                               // 电机初始化
-    DISP_Init();                                // UART 显示器初始化（发送到上层）
+    OLED_Init();
+    OLED_ColorTurn(0);
+    OLED_DisplayTurn(0);
+    OLED_Clear();
+    STEPPER_Init();
 
-    // NVIC
-    NVIC_EnableIRQ(DRV8870_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOB_INT_IRQN);
     NVIC_EnableIRQ(UART_0_INST_INT_IRQN);
-
-    // 所有配置就绪后，启动 PID 定时器
-    DL_Timer_startCounter(MOTOR_PID_INST);
-    __enable_irq(); // 全局中断使能，PID 接管
+    __enable_irq();
 
     while (1)
     {
-        // 同步物理按键状态到运行模式（按键切换 0/1/2，取模到 0/1）
         static int last_status = -1;
         if (status != last_status)
         {
             last_status = status;
-            GYRO_SetMode(status % 2);
+            g_mode = status % 2;
+            if (g_mode == MODE_TRACK)
+            {
+                track_start_ms = sys_tick_ms;
+                marker_stopped = 0;
+            }
+            uart_printf("mode:%d\r\n", g_mode); // 同步到下层 car2
         }
 
-        if (GYRO_GetMode() == MODE_ANGLE_TUNE)
+        if (g_mode == MODE_ANGLE_TUNE)
         {
-            DISP_ShowString(0, 0, "Start                                                      ", 16);
-            DISP_Refresh();
+            OLED_ShowString(0, 0, (u8 *)"Start                                                      ", 16);
         }
         else
         {
@@ -94,9 +94,9 @@ int main(void)
             uint32_t disp_ms = marker_stopped ? (track_stop_ms - track_start_ms)
                                               : (sys_tick_ms - track_start_ms);
             sprintf(str, "T:%4.1f s", disp_ms / 1000.0f);
-            DISP_ShowString(0, 0, str, 16);
-            DISP_Refresh();
+            OLED_ShowString(0, 0, (u8 *)str, 16);
         }
-        DISP_Refresh();
+        OLED_Refresh();
+        delay_ms(50);
     }
 }

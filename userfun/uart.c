@@ -1,8 +1,6 @@
 #include "uart.h"
 #include "stdio.h"
 #include "stdarg.h"
-#include "track.h"
-#include "gyro.h"
 
 //----------------------------------------格式化打印（用于VOFA+调试）-------------------------//
 void uart_printf(const char *fmt, ...)
@@ -47,39 +45,7 @@ void UART_send_buffer(UART_Regs *uart, const uint8_t *buf, const uint8_t len)
 }
 
 //------------------------------------------中断接收字符------------------------------------//
-// LLM-PID-Tuner 命令解析（轻量级手动解析，不依赖 sscanf/strtof）
 #define CMD_BUF_SIZE 48
-
-// 手动解析 float，支持 "-?[0-9]+\.?[0-9]*"，返回解析后指针
-static const char *parse_float(const char *s, float *out)
-{
-	int sign = 1;
-	if (*s == '-')
-	{
-		sign = -1;
-		s++;
-	}
-	float int_part = 0.0f;
-	while (*s >= '0' && *s <= '9')
-	{
-		int_part = int_part * 10.0f + (float)(*s - '0');
-		s++;
-	}
-	if (*s == '.')
-	{
-		s++;
-		float frac = 0.0f, div = 1.0f;
-		while (*s >= '0' && *s <= '9')
-		{
-			frac = frac * 10.0f + (float)(*s - '0');
-			div *= 10.0f;
-			s++;
-		}
-		int_part += frac / div;
-	}
-	*out = sign * int_part;
-	return s;
-}
 
 void UART_0_INST_IRQHandler()
 {
@@ -96,55 +62,27 @@ void UART_0_INST_IRQHandler()
 				if (cmd_idx > 0)
 				{
 					cmd_buf[cmd_idx] = '\0';
-					const char *s = cmd_buf;
 
-					// ---- 命令：mode:x（切换运行模式）----
-					if (s[0] == 'm' && s[1] == 'o' && s[2] == 'd' && s[3] == 'e' && s[4] == ':')
+					// @M：下层 car2 停车，同步冻结计时
+					if (cmd_buf[0] == '@' && cmd_buf[1] == 'M')
 					{
-						s += 5;
-						if (s[0] >= '0' && s[0] <= '9' && s[1] == '\0')
+						extern volatile uint8_t marker_stopped;
+						extern volatile uint32_t track_stop_ms;
+						extern volatile uint32_t sys_tick_ms;
+						if (!marker_stopped)
 						{
-							GYRO_SetMode(s[0] - '0');
+							marker_stopped = 1;
+							track_stop_ms = sys_tick_ms;
 						}
 					}
-					// ---- 命令：angle.target=x（设置角度 PID 目标值）----
-					else if (s[0] == 'a' && s[1] == 'n' && s[2] == 'g' && s[3] == 'l' &&
-							 s[4] == 'e' && s[5] == '.' && s[6] == 't')
+					// mode:x：接收来自 car2 的模式切换
+					else if (cmd_buf[0] == 'm' && cmd_buf[1] == 'o' && cmd_buf[2] == 'd' &&
+							 cmd_buf[3] == 'e' && cmd_buf[4] == ':')
 					{
-						// s+13 跳过 "angle.target=" 全部 13 字符
-						float val;
-						parse_float(s + 13, &val);
-						angle_target = val;
-					}
-					// ---- 命令：SET P:x I:y D:z（根据当前模式设置对应 PID）----
-					else if (s[0] == 'S' && s[1] == 'E' && s[2] == 'T' && s[3] == ' ')
-					{
-						float new_p, new_i, new_d;
-						s += 4;
-						if (s[0] == 'P' && s[1] == ':')
-						{
-							s = parse_float(s + 2, &new_p);
-							if (s[0] == ' ' && s[1] == 'I' && s[2] == ':')
-							{
-								s = parse_float(s + 3, &new_i);
-								if (s[0] == ' ' && s[1] == 'D' && s[2] == ':')
-								{
-									s = parse_float(s + 3, &new_d);
-									if (GYRO_GetMode() == MODE_ANGLE_TUNE)
-									{
-										a_kp = new_p;
-										a_ki = new_i;
-										a_kd = new_d;
-									}
-									else
-									{
-										p_kp = new_p;
-										p_ki = new_i;
-										p_kd = new_d;
-									}
-								}
-							}
-						}
+						extern volatile int status;
+						char m = cmd_buf[5];
+						if (m >= '0' && m <= '1')
+							status = m - '0';
 					}
 					cmd_idx = 0;
 				}
