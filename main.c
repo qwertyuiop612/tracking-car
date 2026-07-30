@@ -36,7 +36,7 @@
 #include "track.h"
 #include "interrupt.h"
 #include "motor.h"
-#include "oled.h"
+#include "display.h"
 #include "servo.h"
 #include "gyro.h"
 #include "uart.h"
@@ -45,9 +45,6 @@
 
 volatile int status = 0;
 volatile uint32_t sys_tick_ms = 0;
-GyroData_t gyro_data;
-char oled_str1[50];
-char oled_str2[50];
 
 /*// VOFA+ 调试用（用简单计数器，不依赖SysTick）
 static uint32_t vofa_counter = 0;
@@ -65,10 +62,7 @@ int main(void)
     GYRO_Init();                                // 陀螺仪初始化
     SERVO_Init();                               // 舵机初始化
     MOTOR_Init();                               // 电机初始化
-    OLED_Init();
-    OLED_ColorTurn(0);
-    OLED_DisplayTurn(0);
-    OLED_Clear();
+    DISP_Init();                                // UART 显示器初始化（发送到上层）
 
     // NVIC
     NVIC_EnableIRQ(DRV8870_GPIOA_INT_IRQN);
@@ -91,8 +85,8 @@ int main(void)
 
         if (GYRO_GetMode() == MODE_ANGLE_TUNE)
         {
-            OLED_ShowString(0, 0, (u8 *)"Start                                                      ", 16);
-            OLED_Refresh();
+            DISP_ShowString(0, 0, "Start                                                      ", 16);
+            DISP_Refresh();
         }
         else
         {
@@ -100,9 +94,9 @@ int main(void)
             uint32_t disp_ms = marker_stopped ? (track_stop_ms - track_start_ms)
                                               : (sys_tick_ms - track_start_ms);
             sprintf(str, "T:%4.1f s", disp_ms / 1000.0f);
-            OLED_ShowString(0, 0, (u8 *)str, 16);
-            OLED_Refresh();
+            DISP_ShowString(0, 0, str, 16);
+            DISP_Refresh();
         }
-        OLED_Refresh();
+        DISP_Refresh();
     }
 }

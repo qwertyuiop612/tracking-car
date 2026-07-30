@@ -7,6 +7,7 @@ SHELL = cmd.exe
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../userfun/default.c \
+../userfun/display.c \
 ../userfun/gyro.c \
 ../userfun/interrupt.c \
 ../userfun/mgnt.c \
@@ -19,6 +20,7 @@ C_SRCS += \
 
 C_DEPS += \
 ./userfun/default.d \
+./userfun/display.d \
 ./userfun/gyro.d \
 ./userfun/interrupt.d \
 ./userfun/mgnt.d \
@@ -31,6 +33,7 @@ C_DEPS += \
 
 OBJS += \
 ./userfun/default.o \
+./userfun/display.o \
 ./userfun/gyro.o \
 ./userfun/interrupt.o \
 ./userfun/mgnt.o \
@@ -43,6 +46,7 @@ OBJS += \
 
 OBJS__QUOTED += \
 "userfun\default.o" \
+"userfun\display.o" \
 "userfun\gyro.o" \
 "userfun\interrupt.o" \
 "userfun\mgnt.o" \
@@ -55,6 +59,7 @@ OBJS__QUOTED += \
 
 C_DEPS__QUOTED += \
 "userfun\default.d" \
+"userfun\display.d" \
 "userfun\gyro.d" \
 "userfun\interrupt.d" \
 "userfun\mgnt.d" \
@@ -67,6 +72,7 @@ C_DEPS__QUOTED += \
 
 C_SRCS__QUOTED += \
 "../userfun/default.c" \
+"../userfun/display.c" \
 "../userfun/gyro.c" \
 "../userfun/interrupt.c" \
 "../userfun/mgnt.c" \

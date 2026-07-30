@@ -15,6 +15,7 @@ ORDERED_OBJS += \
 "./main.o" \
 "./userfun/OLED/oled.o" \
 "./userfun/default.o" \
+"./userfun/display.o" \
 "./userfun/gyro.o" \
 "./userfun/interrupt.o" \
 "./userfun/mgnt.o" \
@@ -151,8 +152,8 @@ tube.out: $(OBJS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(GEN_MISC_FILES__QUOTED)$(GEN_FILES__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "main.o" "userfun\OLED\oled.o" "userfun\default.o" "userfun\gyro.o" "userfun\interrupt.o" "userfun\mgnt.o" "userfun\motor.o" "userfun\sensor.o" "userfun\servo.o" "userfun\track.o" "userfun\track_nopid.o" "userfun\uart.o" 
-	-$(RM) "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "main.d" "userfun\OLED\oled.d" "userfun\default.d" "userfun\gyro.d" "userfun\interrupt.d" "userfun\mgnt.d" "userfun\motor.d" "userfun\sensor.d" "userfun\servo.d" "userfun\track.d" "userfun\track_nopid.d" "userfun\uart.d" 
+	-$(RM) "ti_msp_dl_config.o" "startup_mspm0g350x_ticlang.o" "main.o" "userfun\OLED\oled.o" "userfun\default.o" "userfun\display.o" "userfun\gyro.o" "userfun\interrupt.o" "userfun\mgnt.o" "userfun\motor.o" "userfun\sensor.o" "userfun\servo.o" "userfun\track.o" "userfun\track_nopid.o" "userfun\uart.o" 
+	-$(RM) "ti_msp_dl_config.d" "startup_mspm0g350x_ticlang.d" "main.d" "userfun\OLED\oled.d" "userfun\default.d" "userfun\display.d" "userfun\gyro.d" "userfun\interrupt.d" "userfun\mgnt.d" "userfun\motor.d" "userfun\sensor.d" "userfun\servo.d" "userfun\track.d" "userfun\track_nopid.d" "userfun\uart.d" 
 	-@echo ' '
 
 .PHONY: all clean dependents
