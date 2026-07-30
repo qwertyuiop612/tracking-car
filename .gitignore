@@ -1,0 +1,31 @@
+# Build outputs
+Debug/*.o
+Debug/*.d
+Debug/*.d_raw
+Debug/userfun/*.o
+Debug/userfun/*.d
+Debug/userfun/*.d_raw
+Debug/userfun/**/*.o
+Debug/userfun/**/*.d
+Debug/userfun/**/*.d_raw
+Debug/*.out
+Debug/*.map
+Debug/*.hex
+Debug/*.bin
+Debug/*_linkInfo.xml
+Debug/device_linker.cmd
+Debug/device.cmd.genlibs
+Debug/device.opt
+Debug/Event.dot
+
+# IDE
+.settings/
+.vscode/
+.ccsproject
+.cproject
+.project
+.clangd
+
+# SysConfig generated (regenerated from .syscfg)
+Debug/ti_msp_dl_config.c
+Debug/ti_msp_dl_config.h
